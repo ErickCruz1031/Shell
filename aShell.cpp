@@ -125,6 +125,7 @@ int main ()
             {
                 //cout << "Delete key!\n";
                 write(1, "\b \b", 3);
+                continue;
             }
         
            //Implement the backspace
@@ -183,8 +184,8 @@ int main ()
         }
         
         //cd command implementation
-        cout << "i is " << i << "\n";
-        cout << "size is " << command.size() << "\n";
+        //cout << "i is " << i << "\n";
+        //cout << "size is " << command.size() << "\n";
 
         
         else if (FirstPart.compare("cd") == 0)
@@ -201,28 +202,52 @@ int main ()
                     path.push_back(command[k]);
                 }
             }
-            cout << "Path is " << path << " with length " << path.size() << "\n";
             
             for (int j = 0; j < path.size(); j++)
             {
                 cout << path[j];
             }
+
+            if (path == "..")
+            {
+                path = "";
+                for(int j = dr.size() - 1; j >=  0; j--)
+                {
+                    if (dr[j] == '/')
+                    {
+                        //cout << "We got a hit and it is " << dr << " at " << j << " \n";
+                        for(int k = 0; k < j; k++)
+                        {
+                            path.push_back(dr[k]);
+                        }
+                        cout << "Path is " << path << " with length " << path.size() << "\n";
+                        break;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                }
+
+            }//Parent directory
             const char* new_path = path.c_str();
             int newDir = chdir(new_path);
             if (newDir == 0)
             {
-                ptr = getcwd(directory, 50);
-                write(1, ptr, 50);
-                
+               continue;
             }
-            //ptr = getcwd(directory, 50);
-            
-            //cout << "\n";
+            else
+            {
+                continue;
+                //ERROR BC IT DOESNT OPEN
+            }
             
         }
         
-        if (FirstPart.compare("ls") == 0)
+        else if (FirstPart.compare("ls") == 0)
         {
+            cout << "HI\n";
             if (i == command.size())//There is no path
             {
                 new_path = ptr;
