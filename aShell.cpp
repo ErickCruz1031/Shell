@@ -89,14 +89,14 @@ int main ()
     //int size = 0;
     char temp;
     struct termios Attributes;
-    bool exit = false;
+    bool loop_exit = false;
     char endChar = '%';
     char newLine = '\n';
     const char* new_path;
     
     
     SetNonCanonicalMode(0, &Attributes);
-    while (exit != true)
+    while (!loop_exit)
     {
         ptr = getcwd(directory, 50);
         dr = string(ptr);
@@ -172,6 +172,7 @@ int main ()
             
         }//Get length of the command
 
+        // write(1, "\n", 1);
         
         //Reset size of string after pushing back all of the command
         //That is why it doesnt work once you put more than one of the comands
@@ -179,7 +180,6 @@ int main ()
         {
             write(1, "\n", 1);
             printString(dr);//Subject to change size of this
-            write(1, "\n" , 1);
             
         }
         
@@ -245,6 +245,73 @@ int main ()
             
         }
         
+        else if (FirstPart.compare("exit") == 0)
+        {
+        	write(1, "\n", 1);
+        	exit(1);
+        }
+        else if (FirstPart.compare("ff") == 0){
+        	cout << "made it to ff" << "\n";
+        	// parse other parters of command
+   			bool has_one_sep_only = false; // only has one separation in command
+   			bool has_two_sep = false;
+   			bool previous_space = false;
+   			string ff_filename; // TODO: allocate memory with 'new'
+   			string ff_directory;
+   			cout << "i: " << i << "\n";
+   			cout << "size of command: " << command.size() << "\n";
+        	for (int m = i; m < command.size(); m++)
+            {
+            	
+            	cout << "m: " << m << "\n";
+                if (command[m] == ' ')
+                {
+                	if (previous_space){
+                		continue; // if last character was space also, continue to next character
+                	}
+                	if (!has_one_sep_only){
+                		if (m != command.size() - 1){
+                			has_one_sep_only = true;
+                			cout << "has one sep" << "\n";
+                		}
+                	}
+                	else if (has_one_sep_only && !has_two_sep){
+                		has_one_sep_only = false;
+                		if (m != command.size() - 1){
+                			has_two_sep = true;
+                			cout << "has two sep" << "\n";
+                		}
+                	}
+                	previous_space = true;
+                    continue;
+                }
+                else // non-space character
+                {
+                	previous_space = false;
+                    if (has_one_sep_only){
+                    	ff_filename.push_back(command[m]);
+
+                    }
+                    else if (has_two_sep){ // TODO: add check for more than two parameters (error)
+                    	ff_directory.push_back(command[m]);
+                    }
+                }
+            }
+            cout << "filename: " << ff_filename << "\n";
+            cout << "directory: " << ff_directory << "\n";
+            if (has_one_sep_only)
+            { 
+            	// only have filename parameter, use cwd as directory
+           		ff_recurse(ptr, ff_filename.str());
+            }
+            else if (has_two_sep) 
+            {
+            
+            	// use given directory
+            	ff_recurse(ff_directory.str(), ff_filename.str());
+            }
+
+        }
         else if (FirstPart.compare("ls") == 0)
         {
             cout << "HI\n";
@@ -312,11 +379,43 @@ int main ()
     }
     
     
-    
+  
     
     
     ResetCanonicalMode(0, &Attributes);
     return 0;
+    
+}
+
+vector<string> ff_recurse(char* current_dir, char* filename){
+	// base case: found filename in directory!
+	// recursive case: found another directory, add to path in list of paths
+	DIR *ff_dir;
+    struct dirent *ff_struct;
+    string str_current_dir(current_dir);
+    string str_filename(filename);
+    string ff_d_name;
+    vector<string> ff_vector;
+    if ((ls_directory = opendir(current_dir)) == NULL){
+        write(1, "ERROR", 5);
+    }
+    else{
+    	while ((ff_struct = readdir(ff_dir)) != NULL){
+    		int i = 0;
+    		while (ff_struct->d_name[i] != '\0')
+            {
+                ff_d_name.push_back(ff_struct->d_name[i]);
+                i++;
+            }
+            if (ff_d_name.compare(str_filename) == 0) // found a match
+            {
+            	ff_vector.push_back(str_filename);
+            }
+            else if (open_dir(ff_struct->d_name) != NULL){ // another directory, recurse
+            	ff_recurse(ff_struct)
+            }
+        }
+    }
     
 }
 
