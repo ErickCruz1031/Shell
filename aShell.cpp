@@ -35,20 +35,58 @@ void SetNonCanonicalMode(int fd, struct termios *savedattributes){
     TermAttributes.c_cc[VTIME] = 0;
     tcsetattr(fd, TCSAFLUSH, &TermAttributes);
 }
+void printString(string Source)
+{
+    for(int i = 0; i < Source.size(); i++)
+    {
+        write(1, &Source[i], 1);
+    }
+    return;
+}
+
+string truncateString(string Line)
+{
+    string New;
+    for (int k = Line.size() - 1; k >= 0; k--)
+    {
+        if (Line[k] == '/')
+        {
+            New = "/.../";
+            //cout << "Initial k is " << k << "\n";
+            for (int j = k + 1; j < Line.size(); j++)
+            {
+                New.push_back(Line[j]);
+            }
+            break;
+
+        }
+        else
+        {
+            continue;
+        }
+
+    }
+    return New;
+}
+
 
 
 int main ()
 {
     char buffer;
-    char command[500];
+    string command;
     char directory[100];
+    bool Arrow_One = false;
+    bool Arrow_Two = false;
     string FirstPart;
     string temp2;
+    string** past_commands;
     string path;
+    string dr;
     char* cwd;
     char* ptr;
     char* parsed;
-    int size = 0;
+    //int size = 0;
     char temp;
     struct termios Attributes;
     bool exit = false;
@@ -60,14 +98,53 @@ int main ()
     SetNonCanonicalMode(0, &Attributes);
     while (exit != true)
     {
-        ptr = getcwd(directory, 25);
-        write(1, ptr, 25);
+        ptr = getcwd(directory, 50);
+        dr = string(ptr);
+
+        if (dr.size() >= 16)
+        {
+            string temp = truncateString(dr);
+            printString(temp);
+            
+        }
+        else
+        {
+            printString(dr);
+        }
+
         write(1, &endChar, 1);
         write(1, " ", 1);
-        //write(1, &newLine, 1);
+        //Print the current directory
         
+        int dummy = 0;
         while(read(0, &buffer, 1) > 0)
         {
+           // cout << "hi!!!! \n";
+        
+            if(int(buffer) ==  127)
+            {
+                //cout << "Delete key!\n";
+                write(1, "\b \b", 3);
+            }
+        
+           //Implement the backspace
+            if (int(buffer) == 27) //Check to see if it is the arrow
+            {
+                read(0, &buffer, 1);
+                if (int(buffer) == 91)
+                {
+                    read(0, &buffer, 1);               
+                    if(int(buffer) == 65)
+                    {
+                        cout << "This was the up arrow!\n";
+                    }
+                    else if (int(buffer) == 66)
+                    {
+                        cout << "This was the down arrow \n";
+                    }
+                }
+            }
+
             if (buffer == '\n')
             {
                 break;
@@ -75,17 +152,17 @@ int main ()
             }
             else
             {
-                command[size] = buffer;
+                command.push_back(buffer);
                 
             }
             write(1, &buffer, 1);
-            size++;
+            dummy++;
             
         }
         //cout << "The size is " << size << "\n";
 
         int i = 0;
-        while (command[i] != ' ' && i < size)
+        while (command[i] != ' ' && i < command.size())
         {
             
             //cout << "Pushing back" << command[i] << "AHHH\n";
@@ -100,23 +177,31 @@ int main ()
         if (FirstPart.compare("pwd") == 0)
         {
             write(1, "\n", 1);
-            write(1, ptr, 25);//Subject to change size of this
+            printString(dr);//Subject to change size of this
             write(1, "\n" , 1);
             
         }
         
         //cd command implementation
         cout << "i is " << i << "\n";
-        cout << "size is " << size << "\n";
+        cout << "size is " << command.size() << "\n";
 
         
-         if (FirstPart.compare("cd") == 0)
+        else if (FirstPart.compare("cd") == 0)
         {
             //Get the path
-            for (int k = i + 1; k < size; k++)
+            for (int k = i + 1; k < command.size(); k++)
             {
-                path.push_back(command[k]);
+                if (command[k] == ' ')
+                {
+                    continue;
+                }
+                else
+                {
+                    path.push_back(command[k]);
+                }
             }
+            cout << "Path is " << path << " with length " << path.size() << "\n";
             
             for (int j = 0; j < path.size(); j++)
             {
@@ -138,13 +223,13 @@ int main ()
         
         if (FirstPart.compare("ls") == 0)
         {
-            if (i == size)//There is no path
+            if (i == command.size())//There is no path
             {
                 new_path = ptr;
             }
             else
             {
-                for (int l = i + 1; l < size; l++)
+                for (int l = i + 1; l < command.size(); l++)
                 {
                     path.push_back(command[l]);
                 }
@@ -194,7 +279,8 @@ int main ()
         }
         
         
-        size = 0; //Reset the command
+        //size = 0; //Reset the command
+        command = "";
         FirstPart = "";
         path = "";
         //Empty out the string again
