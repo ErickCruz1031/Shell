@@ -40,6 +40,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
     //cout << "Current directory ff: " << str_current_dir << "\n";
     if ((ff_dir = opendir(current_dir)) == NULL)
     {
+
         //write(1, "ERROR", 5);
         // reached a file-- base case
         if (str_current_dir.compare(str_filename) == 0) // found a match
@@ -67,7 +68,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         }
     }
     else{ // reached a directory
-
+        // cout << "we're in a directory: " << str_current_dir << "\n";
         //last_dir = last_dir + "/";
         //last_dir = last_dir + str_current_dir;
         string temp;
@@ -80,6 +81,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         {
             temp = last_dir + "/" + str_current_dir;
         }
+        // cout << "temp: " << temp << "\n";
         chdir(temp.c_str());
         //string temp = last_dir + "/" + str_current_dir;
         // cout << "str curr dir: " << str_current_dir << "\n";
@@ -88,6 +90,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         //     write(1, &current_dir[k], 1);
         // }
         // write(1, "/", 1);
+
         while ((ff_struct = readdir(ff_dir)) != NULL)
         {
             int i = 0;
@@ -389,7 +392,7 @@ int main ()
             }
 
             write(1, "\n", 1);
-            
+
             const char *ff_dir_char = ff_directory.c_str();
             const char *ff_filename_char = ff_filename.c_str();
             // cout << "filename: " << ff_filename << "\n";
@@ -402,7 +405,7 @@ int main ()
             else if (has_two_sep) 
             {
                 // cout << "dr: " << dr << "\n";
-                ff_recurse(ff_dir_char, ff_filename_char, dr, true);
+                ff_recurse(ff_dir_char, ff_filename_char, ff_directory, true);
 
        //       DIR *ff_dir;
                 // struct dirent *ff_struct;
@@ -432,7 +435,8 @@ int main ()
         }
         else if (FirstPart.compare("ls") == 0)
         {
-            cout << "HI\n";
+            // cout << "HI\n";
+            write(1, "\n", 1);
             if (i == command.size())//There is no path
             {
                 new_path = ptr;
@@ -483,8 +487,9 @@ int main ()
                     //cout << ls_struct->d_name << "\n";
                     //write(1, "\n", 1);
                 }
+                closedir(ls_directory);
             }
-            closedir(ls_directory);
+            
             
         }
         
