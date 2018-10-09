@@ -14,7 +14,7 @@ using namespace std;
 void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
-bool ff_recurse(const char* current_dir, const char* filename, string last_dir, bool First){
+bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     // base case: found a file in directory!
     // recursive case: found another directory, add to path in list of paths
     DIR *ff_dir;
@@ -22,13 +22,13 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
     string str_current_dir(current_dir);
     string str_filename(filename);
     string ff_d_name;
-    char directory[100];
+    char directory[250];
     string file_path; 
 
     // cout << "Opening " << str_current_dir << "\n";
     char *ptr = getcwd(directory, 250);
     string str_ptr(ptr);
-    // cout << "current: " << str_ptr << "\n";
+    cout << "current: " << str_ptr << " with " << str_current_dir << "\n";
 
     if ((str_current_dir.compare(".") == 0) || (str_current_dir.compare("..") == 0)){
         return false;
@@ -44,10 +44,8 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         // reached a file-- base case
         if (str_current_dir.compare(str_filename) == 0) // found a match
         {
-            // cout << "WE got a hit!!!!!!!!!!!!!!!!!!!!!!!\n";
-            // cout << "last dir: " << last_dir << "\n";
-            // cout << "hello\n";
 
+            cout << "MATCH \n";
             file_path = str_ptr + "/" + str_filename;
             // print the file
 
@@ -56,10 +54,6 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
             }
             write(1, "\n", 1);
 
-            // for (int j = 0; j < str_current_dir.size(); j++)
-            // {
-            //     write(1, &current_dir[j], 1);
-            // }
             return true; 
         }
         else{
@@ -68,26 +62,25 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
     }
     else{ // reached a directory
 
-        //last_dir = last_dir + "/";
-        //last_dir = last_dir + str_current_dir;
         string temp;
-        // cout << "last_dir asdf: "<< last_dir << "\n";
-        if (First)
+
+        //cout << "Opened " << str_current_dir << "\n";
+        //cout << "Before " << last_dir << "\n";
+        if (last_dir == str_current_dir)
         {
             temp = last_dir;
+
         }
         else
         {
             temp = last_dir + "/" + str_current_dir;
         }
+
+
+        cout << "Just opened "  << temp << "\n";
+        //cout << "Other one is " << str_current_dir << "\n";
         chdir(temp.c_str());
-        //string temp = last_dir + "/" + str_current_dir;
-        // cout << "str curr dir: " << str_current_dir << "\n";
-        // for (int k = 0; k < str_current_dir.size(); k++)
-        // {
-        //     write(1, &current_dir[k], 1);
-        // }
-        // write(1, "/", 1);
+
         while ((ff_struct = readdir(ff_dir)) != NULL)
         {
             int i = 0;
@@ -96,8 +89,8 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
                 ff_d_name.push_back(ff_struct->d_name[i]);
                 i++;
             }
-            ff_recurse(ff_struct->d_name, filename, temp, false);
-            // cout << "RETURNRED from " << ff_struct->d_name << "\n";
+            ff_recurse(ff_struct->d_name, filename, temp);
+            //cout << "RETURNRED from " << ff_struct->d_name << "\n";
         }
         chdir(last_dir.c_str());
         return false;
@@ -164,7 +157,8 @@ int main ()
 {
     char buffer;
     string command;
-    char directory[100];
+    char directory[255];
+    char backup[255];
     bool Arrow_One = false;
     bool Arrow_Two = false;
     string FirstPart;
@@ -187,7 +181,7 @@ int main ()
     SetNonCanonicalMode(0, &Attributes);
     while (!loop_exit)
     {
-        ptr = getcwd(directory, 50);
+        ptr = getcwd(directory, 255);
         dr = string(ptr);
 
         if (dr.size() >= 16)
@@ -334,6 +328,7 @@ int main ()
         else if (FirstPart.compare("exit") == 0)
         {
             write(1, "\n", 1);
+            ResetCanonicalMode(0, &Attributes);
             exit(1);
         }
         else if (FirstPart.compare("ff") == 0){
@@ -377,6 +372,7 @@ int main ()
                 }
                 else // non-space character
                 {
+
                     previous_space = false;
                     if (has_one_sep_only){
                         ff_filename.push_back(command[m]);
@@ -392,42 +388,25 @@ int main ()
             
             const char *ff_dir_char = ff_directory.c_str();
             const char *ff_filename_char = ff_filename.c_str();
-            // cout << "filename: " << ff_filename << "\n";
-            // cout << "directory: " << ff_directory << "\n";
+            cout << "filename: " << ff_filename << "\n";
+            cout << "directory: " << dr << "\n";
+            //SUbject to change!!!
+            int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
+            if (move < 0)
+            {
+                cout << "NOO\n";
+            }
+            //char* other_ptr = getcwd(backup, 255);
             if (has_one_sep_only)
             { 
                 // only have filename parameter, use cwd as directory
-                ff_recurse(ptr, ff_filename.c_str(), dr, true);
+                ff_recurse(ptr, ff_filename.c_str(), dr);
             }
             else if (has_two_sep) 
             {
                 // cout << "dr: " << dr << "\n";
-                ff_recurse(ff_dir_char, ff_filename_char, dr, true);
+                ff_recurse(ff_dir_char, ff_filename_char, dr);
 
-       //       DIR *ff_dir;
-                // struct dirent *ff_struct;
-                // string str_current_dir(current_dir);
-                // string str_filename(filename);
-                // string ff_d_name;
-             //     vector<string> ff_vector;
-                // if ((ff_dir = opendir(current_dir)) == NULL){
-                //     write(1, "ERROR", 5);
-                // }
-                // else{
-                //  while ((ff_struct = readdir(ff_dir)) != NULL){
-                //      ff_d_name ff_struct->d_name 
-                //      int n = 0;
-                //      while (ff_struct->d_name[n] != '\0')
-       //                   {
-       //                   ff_d_name.push_back(ff_struct->d_name[n]);
-       //                   n++;
-       //                   }
-
-                //          // use given directory
-
-                            
-                //     }
-                // }
             }
         }
         else if (FirstPart.compare("ls") == 0)
