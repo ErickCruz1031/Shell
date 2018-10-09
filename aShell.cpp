@@ -22,21 +22,39 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
     string str_current_dir(current_dir);
     string str_filename(filename);
     string ff_d_name;
-    
+    char directory[100];
+    string file_path; 
+
+    // cout << "Opening " << str_current_dir << "\n";
+    char *ptr = getcwd(directory, 250);
+    string str_ptr(ptr);
+    // cout << "current: " << str_ptr << "\n";
 
     if ((str_current_dir.compare(".") == 0) || (str_current_dir.compare("..") == 0)){
         return false;
     }
+    if (str_current_dir.compare(".git") == 0)
+    {
+        return false;
+    }
     //cout << "Current directory ff: " << str_current_dir << "\n";
-    if ((ff_dir= opendir(current_dir)) == NULL)
+    if ((ff_dir = opendir(current_dir)) == NULL)
     {
         //write(1, "ERROR", 5);
         // reached a file-- base case
         if (str_current_dir.compare(str_filename) == 0) // found a match
         {
-            cout << "WE got a hit\n";
-            cout << "last dir: " << last_dir << "\n";
-            cout << "hello\n";
+            // cout << "WE got a hit!!!!!!!!!!!!!!!!!!!!!!!\n";
+            // cout << "last dir: " << last_dir << "\n";
+            // cout << "hello\n";
+
+            file_path = str_ptr + "/" + str_filename;
+            // print the file
+
+            for (int p = 0; p < file_path.size(); p++){
+                write(1, &file_path[p], 1);
+            }
+            write(1, "\n", 1);
 
             // for (int j = 0; j < str_current_dir.size(); j++)
             // {
@@ -49,10 +67,11 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         }
     }
     else{ // reached a directory
+
         //last_dir = last_dir + "/";
         //last_dir = last_dir + str_current_dir;
         string temp;
-        cout << "last_dir asdf: "<< last_dir << "\n";
+        // cout << "last_dir asdf: "<< last_dir << "\n";
         if (First)
         {
             temp = last_dir;
@@ -61,8 +80,9 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
         {
             temp = last_dir + "/" + str_current_dir;
         }
+        chdir(temp.c_str());
         //string temp = last_dir + "/" + str_current_dir;
-        cout << "str curr dir: " << str_current_dir << "\n";
+        // cout << "str curr dir: " << str_current_dir << "\n";
         // for (int k = 0; k < str_current_dir.size(); k++)
         // {
         //     write(1, &current_dir[k], 1);
@@ -77,7 +97,9 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir, 
                 i++;
             }
             ff_recurse(ff_struct->d_name, filename, temp, false);
+            // cout << "RETURNRED from " << ff_struct->d_name << "\n";
         }
+        chdir(last_dir.c_str());
         return false;
     }
    
@@ -216,12 +238,10 @@ int main ()
             if (buffer == '\n')
             {
                 break;
-                
             }
             else
             {
                 command.push_back(buffer);
-                
             }
             write(1, &buffer, 1);
             dummy++;
@@ -247,7 +267,6 @@ int main ()
         {
             write(1, "\n", 1);
             printString(dr);//Subject to change size of this
-            
         }
         
         //cd command implementation
@@ -318,37 +337,39 @@ int main ()
             exit(1);
         }
         else if (FirstPart.compare("ff") == 0){
-            cout << "made it to ff" << "\n";
+
+            // cout << "made it to ff" << "\n";
             // parse other parters of command
             bool has_one_sep_only = false; // only has one separation in command
             bool has_two_sep = false;
             bool previous_space = false;
             string ff_filename; // TODO: allocate memory with 'new'
             string ff_directory;
-            cout << "i: " << i << "\n";
-            cout << "size of command: " << command.size() << "\n";
+            // cout << "i: " << i << "\n";
+            // cout << "size of command: " << command.size() << "\n";
+
             for (int m = i; m < command.size(); m++)
             {
                 
-                cout << "m: " << m << "\n";
+                // cout << "m: " << m << "\n";
                 if (command[m] == ' ')
                 {
-                    cout << "command at " << m << " is a space\n";
-                    cout << "String:" << command << "\n";
+                    // cout << "command at " << m << " is a space\n";
+                    // cout << "String:" << command << "\n";
                     if (previous_space){
                         continue; // if last character was space also, continue to next character
                     }
                     if (!has_one_sep_only){
                         if (m != command.size() - 1){
                             has_one_sep_only = true;
-                            cout << "has one sep" << "\n";
+                            // cout << "has one sep" << "\n";
                         }
                     }
                     else if (has_one_sep_only && !has_two_sep){
                         has_one_sep_only = false;
                         if (m != command.size() - 1){
                             has_two_sep = true;
-                            cout << "has two sep" << "\n";
+                            // cout << "has two sep" << "\n";
                         }
                     }
                     previous_space = true;
@@ -367,10 +388,12 @@ int main ()
                 }
             }
 
+            write(1, "\n", 1);
+            
             const char *ff_dir_char = ff_directory.c_str();
             const char *ff_filename_char = ff_filename.c_str();
-            cout << "filename: " << ff_filename << "\n";
-            cout << "directory: " << ff_directory << "\n";
+            // cout << "filename: " << ff_filename << "\n";
+            // cout << "directory: " << ff_directory << "\n";
             if (has_one_sep_only)
             { 
                 // only have filename parameter, use cwd as directory
@@ -378,7 +401,7 @@ int main ()
             }
             else if (has_two_sep) 
             {
-                cout << "dr: " << dr << "\n";
+                // cout << "dr: " << dr << "\n";
                 ff_recurse(ff_dir_char, ff_filename_char, dr, true);
 
        //       DIR *ff_dir;
