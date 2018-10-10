@@ -572,7 +572,7 @@ int main (int argc, char *argv[], char * const env[])
             //arguments.push_back(null_char);
             cout << "HAHAH\n";
             //cout << "Size before " << arguments.size() << "\n";
-            char** args = new char*[arguments.size()];
+            char** args = new char*[arguments.size() + 1];
             //arguments.push_back("\0");
             cout << "After " << arguments.size() << "\n";
 
@@ -588,8 +588,8 @@ int main (int argc, char *argv[], char * const env[])
 
             }
             cout << "OUT OG LOOP \n" << "\n";
-            //args[arguments.size()] = new char[1];
-            //args[arguments.size()][0] = null_char;
+            args[arguments.size()] = new char[1];
+            args[arguments.size()][0] = null_char;
 
             //cout << args[arguments.size()][0] << "\n";
 
