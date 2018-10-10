@@ -510,8 +510,10 @@ int main (int argc, char *argv[], char * const env[])
         {
             string new_argument;
             int pickup;
+        
             vector<string> arguments;
             cout << "First part is " << FirstPart << "\n";
+
             arguments.push_back(FirstPart);
             //First part is the 'program'
 
@@ -535,7 +537,7 @@ int main (int argc, char *argv[], char * const env[])
                             cout << "New arg was " << new_argument << "\n";
                             pickup = j;
                             //TBD
-                            //new_argument.push_back('\0');
+                            new_argument.push_back('\0');
                             arguments.push_back(new_argument);
                             break;
                         }
@@ -549,7 +551,7 @@ int main (int argc, char *argv[], char * const env[])
 
                     if (j == command.size())
                     {
-                        //new_argument.push_back('\0');
+                        new_argument.push_back('\0');
                         arguments.push_back(new_argument);
                         pickup = -1;
                     }
@@ -568,25 +570,34 @@ int main (int argc, char *argv[], char * const env[])
                 }
             }
             cout << "Here\n";
-            char null_char = '\0';
-            //arguments.push_back(null_char);
+            
+            // char null_char = '\0';
+            // string str_null;
+            // str_null.push_back(null_char);
+            // arguments.push_back(str_null);
             cout << "HAHAH\n";
             //cout << "Size before " << arguments.size() << "\n";
-            char** args = new char*[arguments.size()];
+            char** args = new char*[arguments.size() + 1];
             //arguments.push_back("\0");
             cout << "After " << arguments.size() << "\n";
 
-            for(int b = 0; b < arguments.size(); b++)
+
+            for(int b = 0; b < arguments[b].size(); b++)
             {
                 args[b] = new char[arguments[b].size()];
+
                 for(int c = 0; c < arguments[b].size(); c++)
                 {
+
                     args[b][c] = arguments[b][c];
-                    cout << args[b][c];
+                    // cout << args[b][c];
                 }
                 cout << "\n";
 
             }
+
+            args[arguments.size() + 1] = new char[1];
+            args[arguments.size() + 1] = (char*)NULL;
             cout << "OUT OG LOOP \n" << "\n";
             //args[arguments.size()] = new char[1];
             //args[arguments.size()][0] = null_char;
@@ -596,11 +607,11 @@ int main (int argc, char *argv[], char * const env[])
             cout << "Other output \n";
 
             //printing
-            cout << "PRINTING... \n";
-            for(int b = 0; b < arguments.size(); b++)
-            {
-                cout << args[b] << "\n";
-            }
+            // cout << "PRINTING... \n";
+            // for(int b = 0; b < arguments.size(); b++)
+            // {
+            //     cout << args[b] << "\n";
+            // }
 
 
 
@@ -625,4 +636,3 @@ int main (int argc, char *argv[], char * const env[])
     return 0;
     
 }
-
