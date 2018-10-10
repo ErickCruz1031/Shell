@@ -586,8 +586,8 @@ int main (int argc, char *argv[], char * const env[])
 
             }
 
-            args[arguments.size()] = new char[1];
-            args[arguments.size()][0] = '\0';
+            //args[arguments.size()] = new char[1];
+            //args[arguments.size()][0] = '\0';
 
 
             outsideCommand(FirstPart, args, env);
@@ -601,6 +601,9 @@ int main (int argc, char *argv[], char * const env[])
         FirstPart = "";
         path = "";
         //Empty out the string again
+        //fork, open new file, dup2, call the command
+        //call pipe before the fork 
+        //if you are a child close down the write of pipe bc you wont need it 
     }
     
     
