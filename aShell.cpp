@@ -8,12 +8,50 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <vector>
+#include <signal.h>
 
 using namespace std;
 
 void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
+
+void outsideCommand(string command, char* const* arguments, char * const environ[])
+{
+    //cout << "command is " << command << "\n";
+    //cout << arguments << "\n";
+    char cwd[250];
+    char* dir = getcwd(cwd, 250);
+    char*  env_vars = getenv("PATH");
+    int status;
+    //char* const environ = env_vars;
+    const char *com_str = command.c_str();
+    char* p = getenv("PATH");
+    //cout << "p os " << p << "\n";
+    pid_t pid = fork(); // 
+    if (pid == 0)
+    {
+        if (execvp(com_str, arguments) == -1)
+        {
+            cout << "ERROR \n";
+        }
+        else
+        {
+            cout << "success\n";
+        }
+    }
+    else
+    {
+        int child_pid = wait(&status);
+        cout << "Finished from " << child_pid << "\n";
+    }
+
+    return;
+
+}
+
+
 bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     // base case: found a file in directory!
     // recursive case: found another directory, add to path in list of paths
@@ -28,7 +66,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     // cout << "Opening " << str_current_dir << "\n";
     char *ptr = getcwd(directory, 250);
     string str_ptr(ptr);
-    cout << "current: " << str_ptr << " with " << str_current_dir << "\n";
+    //cout << "current: " << str_ptr << " with " << str_current_dir << "\n";
 
     if ((str_current_dir.compare(".") == 0) || (str_current_dir.compare("..") == 0)){
         return false;
@@ -45,7 +83,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
         if (str_current_dir.compare(str_filename) == 0) // found a match
         {
 
-            cout << "MATCH \n";
+            //cout << "MATCH \n";
             file_path = str_ptr + "/" + str_filename;
             // print the file
 
@@ -77,7 +115,7 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
         }
 
 
-        cout << "Just opened "  << temp << "\n";
+        //cout << "Just opened "  << temp << "\n";
         //cout << "Other one is " << str_current_dir << "\n";
         chdir(temp.c_str());
 
@@ -153,7 +191,7 @@ string truncateString(string Line)
 
 
 
-int main ()
+int main (int argc, char *argv[], char * const env[])
 {
     char buffer;
     string command;
@@ -257,6 +295,7 @@ int main ()
         
         //Reset size of string after pushing back all of the command
         //That is why it doesnt work once you put more than one of the comands
+        cout << "Command is " << FirstPart << "\n";
         if (FirstPart.compare("pwd") == 0)
         {
             write(1, "\n", 1);
@@ -282,25 +321,28 @@ int main ()
                     path.push_back(command[k]);
                 }
             }
-            
+            /*
             for (int j = 0; j < path.size(); j++)
             {
                 cout << path[j];
             }
+            */
 
             if (path == "..")
             {
+                cout << "It is " << dr << "\n";
                 path = "";
                 for(int j = dr.size() - 1; j >=  0; j--)
                 {
                     if (dr[j] == '/')
                     {
+                        cout << "Found at " << j << "\n";
                         //cout << "We got a hit and it is " << dr << " at " << j << " \n";
                         for(int k = 0; k < j; k++)
                         {
                             path.push_back(dr[k]);
                         }
-                        cout << "Path is " << path << " with length " << path.size() << "\n";
+                        //cout << "Path is " << path << " with length " << path.size() << "\n";
                         break;
                     }
                     else
@@ -315,14 +357,11 @@ int main ()
             int newDir = chdir(new_path);
             if (newDir == 0)
             {
-               continue;
+                //write(1, "\n", 1); 
+                //continue;
+                cout << "Opened  \n";
             }
-            else
-            {
-                continue;
-                //ERROR BC IT DOESNT OPEN
-            }
-            
+            write(1, "\n", 1); 
         }
         
         else if (FirstPart.compare("exit") == 0)
@@ -349,38 +388,41 @@ int main ()
                 // cout << "m: " << m << "\n";
                 if (command[m] == ' ')
                 {
-                    // cout << "command at " << m << " is a space\n";
-                    // cout << "String:" << command << "\n";
-                    if (previous_space){
-                        continue; // if last character was space also, continue to next character
-                    }
-                    if (!has_one_sep_only){
-                        if (m != command.size() - 1){
-                            has_one_sep_only = true;
-                            // cout << "has one sep" << "\n";
-                        }
-                    }
-                    else if (has_one_sep_only && !has_two_sep){
-                        has_one_sep_only = false;
-                        if (m != command.size() - 1){
-                            has_two_sep = true;
-                            // cout << "has two sep" << "\n";
-                        }
-                    }
-                    previous_space = true;
                     continue;
                 }
-                else // non-space character
+                else // non-space character, start inputting filename
                 {
+                    cout << "First space at " << m << "\n";
+                    int numerator = m;
+                    for(; numerator < command.size(); numerator++)
+                    {
+                        if (command[numerator] == ' ')
+                        {
+                            break;//End of the filename
+                        }
+                        else
+                        {
+                            ff_filename.push_back(command[numerator]);
+                        }
+                    }//At end of this numerator is at the first space after the filename
 
-                    previous_space = false;
-                    if (has_one_sep_only){
-                        ff_filename.push_back(command[m]);
+                    for (; numerator < command.size(); numerator++)
+                    {
+                        if (command[numerator] == ' ')
+                        {
+                            continue;
+                        } //Skip any spaces between filename and directory
+                        else
+                        {
+                            for(; numerator < command.size(); numerator++)
+                            {
+                                ff_directory.push_back(command[numerator]);
+                            }
+                            break;
+                        }
+                    }
+                    break;
 
-                    }
-                    else if (has_two_sep){ // TODO: add check for more than two parameters (error)
-                        ff_directory.push_back(command[m]);
-                    }
                 }
             }
 
@@ -389,26 +431,23 @@ int main ()
             const char *ff_dir_char = ff_directory.c_str();
             const char *ff_filename_char = ff_filename.c_str();
             cout << "filename: " << ff_filename << "\n";
-            cout << "directory: " << dr << "\n";
+            cout << "directory: " << ff_directory << "\n";
             //SUbject to change!!!
-            int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
+            //int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
+            int move = chdir(ff_dir_char);
             if (move < 0)
             {
                 cout << "NOO\n";
             }
-            //char* other_ptr = getcwd(backup, 255);
-            if (has_one_sep_only)
-            { 
-                // only have filename parameter, use cwd as directory
-                ff_recurse(ptr, ff_filename.c_str(), dr);
-            }
-            else if (has_two_sep) 
-            {
-                // cout << "dr: " << dr << "\n";
-                ff_recurse(ff_dir_char, ff_filename_char, dr);
+            ff_dir_char = getcwd(backup, 255);
+            ff_directory = string(ff_dir_char);
+            cout << "Calling... \n";
+            ff_recurse(ff_dir_char, ff_filename_char, ff_directory);
+            //Move back to our initial directory
+            chdir(ptr);
 
-            }
         }
+        
         else if (FirstPart.compare("ls") == 0)
         {
             cout << "HI\n";
@@ -466,6 +505,109 @@ int main ()
             closedir(ls_directory);
             
         }
+
+        else //Piping
+        {
+            string new_argument;
+            int pickup;
+            vector<string> arguments;
+            cout << "First part is " << FirstPart << "\n";
+            arguments.push_back(FirstPart);
+            //First part is the 'program'
+
+            cout << "The size is " << command.size() << "\n";
+
+            for(int h = i; h < command.size(); h++)
+            {
+                //cout << " h is " << h << "\n";
+                if (command[h] == ' ')
+                {
+                    continue;
+                }
+                else
+                {
+                    int j = h;
+                    for(; j < command.size(); j++)
+                    {
+                        //cout << "j is " << j << "\n";
+                        if (command[j] == ' ')
+                        {
+                            cout << "New arg was " << new_argument << "\n";
+                            pickup = j;
+                            //TBD
+                            //new_argument.push_back('\0');
+                            arguments.push_back(new_argument);
+                            break;
+                        }
+                        else
+                        {
+                            new_argument.push_back(command[j]);
+
+                        }
+
+                    }
+
+                    if (j == command.size())
+                    {
+                        //new_argument.push_back('\0');
+                        arguments.push_back(new_argument);
+                        pickup = -1;
+                    }
+
+
+                }
+                new_argument = "";
+                if (pickup == -1)
+                {
+                    break;
+                }
+                else
+                {
+                    h = pickup;
+
+                }
+            }
+            cout << "Here\n";
+            char null_char = '\0';
+            //arguments.push_back(null_char);
+            cout << "HAHAH\n";
+            //cout << "Size before " << arguments.size() << "\n";
+            char** args = new char*[arguments.size()];
+            //arguments.push_back("\0");
+            cout << "After " << arguments.size() << "\n";
+
+            for(int b = 0; b < arguments.size(); b++)
+            {
+                args[b] = new char[arguments[b].size()];
+                for(int c = 0; c < arguments[b].size(); c++)
+                {
+                    args[b][c] = arguments[b][c];
+                    cout << args[b][c];
+                }
+                cout << "\n";
+
+            }
+            cout << "OUT OG LOOP \n" << "\n";
+            //args[arguments.size()] = new char[1];
+            //args[arguments.size()][0] = null_char;
+
+            //cout << args[arguments.size()][0] << "\n";
+
+            cout << "Other output \n";
+
+            //printing
+            cout << "PRINTING... \n";
+            for(int b = 0; b < arguments.size(); b++)
+            {
+                cout << args[b] << "\n";
+            }
+
+
+
+            outsideCommand(FirstPart, args, env);
+
+            cout << "THE PIPE \n";
+        }
         
         
         //size = 0; //Reset the command
@@ -483,3 +625,4 @@ int main ()
     return 0;
     
 }
+

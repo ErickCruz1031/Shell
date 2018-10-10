@@ -1,0 +1,23 @@
+main()
+int fd[2];
+pid_t child_pid;
+pipe(fd);
+char string[] = "hello";
+char buffer[80];
+
+child_pid = fork();
+
+if (child_pid == 0)
+    close(fd[0])
+    write(fd[1]. string, strlen(string) + 1)
+else
+    close ([fd1])
+    nbuytes = read(fd[0], buffer, 80)
+
+close (0) //STDIN
+dup(fd[0])
+dup2(fd[0], 1)//Make fd[0]  STDIN
+//dup2 standard out into the new fd of the new file that it is being redirected to 
+fd = open("newfile")
+dup2(fd, 1)
+write(fd, buff, size)
