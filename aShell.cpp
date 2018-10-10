@@ -20,8 +20,6 @@ void ResetCanonicalMode(int fd, struct termios *savedattributes){
 
 void outsideCommand(string command, char* const* arguments, char * const environ[])
 {
-    //cout << "command is " << command << "\n";
-    //cout << arguments << "\n";
     char cwd[250];
     char* dir = getcwd(cwd, 250);
     char*  env_vars = getenv("PATH");
@@ -29,7 +27,7 @@ void outsideCommand(string command, char* const* arguments, char * const environ
     //char* const environ = env_vars;
     const char *com_str = command.c_str();
     char* p = getenv("PATH");
-    //cout << "p os " << p << "\n";
+
     pid_t pid = fork(); // 
     if (pid == 0)
     {
@@ -535,7 +533,7 @@ int main (int argc, char *argv[], char * const env[])
                         //cout << "j is " << j << "\n";
                         if (command[j] == ' ')
                         {
-                            cout << "New arg was " << new_argument << "\n";
+                            //cout << "New arg was " << new_argument << "\n";
                             pickup = j;
                             //TBD
                             new_argument.push_back('\0');
@@ -570,58 +568,31 @@ int main (int argc, char *argv[], char * const env[])
 
                 }
             }
-            cout << "Here\n";
+            //cout << "Here\n";
             
-            // char null_char = '\0';
-            // string str_null;
-            // str_null.push_back(null_char);
-            // arguments.push_back(str_null);
-            cout << "HAHAH\n";
+            //cout << "HAHAH\n";
             //cout << "Size before " << arguments.size() << "\n";
             char** args = new char*[arguments.size() + 1];
             //arguments.push_back("\0");
-            cout << "After " << arguments.size() << "\n";
+            //cout << "After " << arguments.size() << "\n";
 
 
             for(int b = 0; b < arguments.size(); b++)
             {
                 args[b] = new char[arguments[b].size()];
-                cout << "b is " << b << "\n";
-                for(int c = 0; c < arguments[b].size(); c++)
-                {
-
-                    args[b][c] = arguments[b][c];
-                    cout << args[b][c];
-                }
-                cout << "\n";
+                //cout << "b is " << b << "\n";
+                strcpy(args[b],arguments[b].c_str());
+                cout << "'"<<args[b]<<"'"<< "\n";
 
             }
 
-            cout << "about \n";
-            //args[arguments.size() + 1] = new char[1];
-            //args[arguments.size() + 1] = (char*)NULL;
             args[arguments.size()] = new char[1];
-            args[arguments.size()] = (char*)NULL;
-            cout << "OUT OG LOOP \n" << "\n";
-            //args[arguments.size()] = new char[1];
-            //args[arguments.size()][0] = null_char;
-
-            //cout << args[arguments.size()][0] << "\n";
-
-            cout << "Other output \n";
-
-            //printing
-            // cout << "PRINTING... \n";
-            // for(int b = 0; b < arguments.size(); b++)
-            // {
-            //     cout << args[b] << "\n";
-            // }
-
+            args[arguments.size()][0] = '\0';
 
 
             outsideCommand(FirstPart, args, env);
 
-            cout << "THE PIPE \n";
+            //cout << "THE PIPE \n";
         }
         
         
