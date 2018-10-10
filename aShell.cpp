@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <signal.h>
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -582,22 +583,25 @@ int main (int argc, char *argv[], char * const env[])
             cout << "After " << arguments.size() << "\n";
 
 
-            for(int b = 0; b < arguments[b].size(); b++)
+            for(int b = 0; b < arguments.size(); b++)
             {
                 args[b] = new char[arguments[b].size()];
-
+                cout << "b is " << b << "\n";
                 for(int c = 0; c < arguments[b].size(); c++)
                 {
 
                     args[b][c] = arguments[b][c];
-                    // cout << args[b][c];
+                    cout << args[b][c];
                 }
                 cout << "\n";
 
             }
 
-            args[arguments.size() + 1] = new char[1];
-            args[arguments.size() + 1] = (char*)NULL;
+            cout << "about \n";
+            //args[arguments.size() + 1] = new char[1];
+            //args[arguments.size() + 1] = (char*)NULL;
+            args[arguments.size()] = new char[1];
+            args[arguments.size()] = (char*)NULL;
             cout << "OUT OG LOOP \n" << "\n";
             //args[arguments.size()] = new char[1];
             //args[arguments.size()][0] = null_char;
