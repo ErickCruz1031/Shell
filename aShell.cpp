@@ -14,6 +14,7 @@
 
 using namespace std;
 
+void singleCommand (vector<string> current_command, string wd);
 void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
@@ -213,8 +214,12 @@ int main (int argc, char *argv[], char * const env[])
     char endChar = '%';
     char newLine = '\n';
     const char* new_path;
+    string current_command;
+    vector<vector<string> > input;
+    vector<string> temporary;
+    int current_index = 0;
     
-    
+    //input.resize(1);
     SetNonCanonicalMode(0, &Attributes);
     while (!loop_exit)
     {
@@ -236,12 +241,22 @@ int main (int argc, char *argv[], char * const env[])
         write(1, " ", 1);
         //Print the current directory
         
-        int dummy = 0;
         while(read(0, &buffer, 1) > 0)
         {
-           // cout << "hi!!!! \n";
+            //cout << "hi!!!! \n";
         
-            if(int(buffer) ==  127)
+            if (int(buffer) == 32)
+            {
+                write(1, &buffer, 1);
+                if (!current_command.empty())
+                {
+                    temporary.push_back(current_command);
+                }
+                current_command = "";
+                continue;
+            }
+
+            else if(int(buffer) ==  127)
             {
                 //cout << "Delete key!\n";
                 write(1, "\b \b", 3);
@@ -249,7 +264,7 @@ int main (int argc, char *argv[], char * const env[])
             }
         
            //Implement the backspace
-            if (int(buffer) == 27) //Check to see if it is the arrow
+            else if (int(buffer) == 27) //Check to see if it is the arrow
             {
                 read(0, &buffer, 1);
                 if (int(buffer) == 91)
@@ -266,35 +281,148 @@ int main (int argc, char *argv[], char * const env[])
                 }
             }
 
-            if (buffer == '\n')
+            else if (buffer == '\n')
             {
+                if (!current_command.empty())
+                {
+                    temporary.push_back(current_command);
+
+                }
+
+                if (!temporary.empty())
+                {
+                    input.push_back(temporary);
+                }
                 break;
+            }
+            else if (buffer == '|')
+            {
+                //input.resize(1);
+                //input[current_index].push_back(current_command);
+                if (!current_command.empty())
+                {
+                    temporary.push_back(current_command);
+                }
+                //temporary.push_back(current_command);
+                input.push_back(temporary);
+                //current_index++;
+                temporary.clear();
+                current_command = "";
+                //current_command = "";
+
             }
             else
             {
-                command.push_back(buffer);
+                current_command.push_back(buffer);
             }
             write(1, &buffer, 1);
-            dummy++;
+            //dummy++;
             
         }
         //cout << "The size is " << size << "\n";
 
         int i = 0;
-        while (command[i] != ' ' && i < command.size())
+        cout << "\n" << "Printing...\n";
+        for(int i = 0; i < input.size(); i++)
         {
             
             //cout << "Pushing back" << command[i] << "AHHH\n";
-            FirstPart.push_back(command[i]);
-            i++;
+            for(int k = 0; k < input[i].size(); k++)
+            {
+                cout << "'" << input[i][k] << "'";
+            }
+            cout << "\n";
             
         }//Get length of the command
+        cout << current_command << "\n";
 
-        // write(1, "\n", 1);
-        
-        //Reset size of string after pushing back all of the command
-        //That is why it doesnt work once you put more than one of the comands
-        cout << "Command is " << FirstPart << "\n";
+            //now all the commands are in input
+        cout << "Before it is " << dr << "\n";
+        cout << input.size() << "\n";
+        if (input.size() == 1)//No piping
+        {
+            singleCommand(input[0], dr);
+
+        }
+        input.clear();
+
+    }
+
+
+
+    ResetCanonicalMode(0, &Attributes);
+    return 0;
+}
+
+
+
+void singleCommand (vector<string> current_command, string wd)
+{
+    cout << current_command[0] << "! !!!!\n";
+    cout << wd << "\n";
+    if (current_command[0].compare("pwd") == 0)
+        {
+            cout << "Here" << "\n";
+            write(1, "\n", 1);
+            printString(wd);//Subject to change size of this
+            write(1, "\n", 1);
+        }
+
+    else if (current_command[0].compare("cd") == 0)
+    {
+        //Get the path
+        /*
+        for (int j = 0; j < path.size(); j++)
+        {
+            cout << path[j];
+        }
+        */
+        string path;
+
+        if (current_command[1] == "..")
+        {
+            cout << "It is " << wd << "\n";
+            path = "";
+            for(int j = wd.size() - 1; j >=  0; j--)
+            {
+                if (wd[j] == '/')
+                {
+                    cout << "Found at " << j << "\n";
+                    //cout << "We got a hit and it is " << dr << " at " << j << " \n";
+                    for(int k = 0; k < j; k++)
+                    {
+                        path.push_back(wd[k]);
+                    }
+                    //cout << "Path is " << path << " with length " << path.size() << "\n";
+                    break;
+                }
+                else
+                {
+                    continue;
+                }
+
+            }
+
+        }//Parent directory
+        else
+        {
+            path = current_command[1];
+        }
+        const char* new_path = path.c_str();
+        int newDir = chdir(new_path);
+        if (newDir == 0)
+        {
+            //write(1, "\n", 1); 
+            //continue;
+            cout << "Opened  \n";
+        }
+        write(1, "\n", 1); 
+    }
+
+    return;
+}
+/*
+
         if (FirstPart.compare("pwd") == 0)
         {
             write(1, "\n", 1);
@@ -320,12 +448,12 @@ int main (int argc, char *argv[], char * const env[])
                     path.push_back(command[k]);
                 }
             }
-            /*
+            
             for (int j = 0; j < path.size(); j++)
             {
                 cout << path[j];
             }
-            */
+            
 
             if (path == "..")
             {
@@ -453,6 +581,7 @@ int main (int argc, char *argv[], char * const env[])
             if (i == command.size())//There is no path
             {
                 new_path = ptr;
+                //getcwd
             }
             else
             {
@@ -463,6 +592,7 @@ int main (int argc, char *argv[], char * const env[])
                 new_path = path.c_str();
             }
             
+            //fork here 
             DIR *ls_directory;
             struct dirent *ls_struct;
             if ((ls_directory = opendir(new_path)) == NULL){
@@ -505,7 +635,7 @@ int main (int argc, char *argv[], char * const env[])
             
         }
 
-        else //Piping
+        else //outside command + piping
         {
             string new_argument;
             int pickup;
@@ -614,3 +744,5 @@ int main (int argc, char *argv[], char * const env[])
     return 0;
     
 }
+
+*/
