@@ -521,7 +521,9 @@ bool singleCommand (vector<string> current_command, string wd)
 
         //sarguments.push_back(current_command[0]);//The name of the executable
         //First part is the 'program'
-
+        char duh[255];
+        char* other = getcwd(duh, 255);
+        cout << string(other) << "\n";
         cout << "The size is " << current_command.size() << "\n";
 
         //cout << "Here\n";
@@ -543,8 +545,9 @@ bool singleCommand (vector<string> current_command, string wd)
 
         }
 
-        //args[current_command.size()] = new char[1];
-        //args[current_command.size()][0] = '\0';
+        args[current_command.size()] = new char[1];
+        // args[current_command.size()][0] = '\0';
+        args[current_command.size()] = (char*)NULL;
 
 
         outsideCommand(current_command[0], args, current_command.size());
