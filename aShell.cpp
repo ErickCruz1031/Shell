@@ -528,7 +528,7 @@ bool singleCommand (vector<string> current_command, string wd)
         
         //cout << "HAHAH\n";
         //cout << "Size before " << arguments.size() << "\n";
-        char** args = new char*[current_command.size() + 1];
+        char** args = new char*[current_command.size()];
         //arguments.push_back("\0");
         //cout << "After " << arguments.size() << "\n";
 
@@ -554,6 +554,7 @@ bool singleCommand (vector<string> current_command, string wd)
 
     return false;
 }
+/*
 //////////////////
 
         if (FirstPart.compare("pwd") == 0)
