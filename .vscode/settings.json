@@ -4,6 +4,8 @@
         "ostream": "cpp",
         "vector": "cpp",
         "iostream": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "__mutex_base": "cpp",
+        "locale": "cpp"
     }
 }

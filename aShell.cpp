@@ -21,38 +21,37 @@ void ResetCanonicalMode(int fd, struct termios *savedattributes){
 
 void outsideCommand(string command, char* const* arguments, int num_args)
 {
-    char cwd[250];
-    char* dir = getcwd(cwd, 250);
-    char*  env_vars = getenv("PATH");
     int status;
-    //char* const environ = env_vars;
-    const char *com_str = command.c_str();
-    char* p = getenv("PATH");
-    cout << "Arguments ...\n";
 
-    for(int i = 0; i < num_args; i++)
-    {
-        cout << "'" << string(arguments[i]) << "'" << "\n";
-    }
-
+    //cout << "hello there\n";
     pid_t pid = fork(); // 
     if (pid == 0)
     {
+        //cout << "sogknva\n";
+        execvp(arguments[0], arguments);
+        //cout << "Exec worked\n";
+        /*
         if (execvp(arguments[0], arguments) == -1)
         {
-            cout << "ERROR \n";
-            cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
+            //cout << "ERROR \n";
+            //cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
         }
         else
         {
-            cout << "success\n";
+            //cout << "success\n";
         }
+        */
     }
+    /*
     else
     {
-        int child_pid = wait(&status);
-        cout << "Finished from " << child_pid << "\n";
+        cout << "PARENT\n";
+        //int child_pid = waitpid(pid, &status, 0);
+        //cout << "Status is " << status << " and other is " << child_pid << "\n";
+        //cout << "Finished from " << child_pid << "\n";
     }
+    cout << "RETURN\n";
+    */
 
     return;
 
@@ -325,7 +324,7 @@ int main (int argc, char *argv[], char * const env[])
             
         }
         //cout << "The size is " << size << "\n";
-
+        /*
         int i = 0;
         cout << "\n" << "Printing...\n";
         for(int i = 0; i < input.size(); i++)
@@ -339,11 +338,12 @@ int main (int argc, char *argv[], char * const env[])
             cout << "\n";
             
         }//Get length of the command
-        cout << current_command << "\n";
+        //cout << current_command << "\n";
+        */
 
             //now all the commands are in input
-        cout << "Before it is " << dr << "\n";
-        cout << input.size() << "\n";
+        //cout << "Before it is " << dr << "\n";
+        //cout << input.size() << "\n";
         if (input.size() == 1)//No piping
         {
             bool done = singleCommand(input[0], dr);
@@ -354,6 +354,51 @@ int main (int argc, char *argv[], char * const env[])
             }
 
         }
+        else
+        {
+            int fd[2];
+            int status;
+
+            pipe(fd);
+
+            pid_t child_one = fork();
+
+            if (child_one == 0)
+            {
+                close(fd[0]);
+                dup2(fd[1], 1);
+                close(fd[1]);
+                cout << "executing first\n";
+                singleCommand(input[0], dr);
+
+                cout << "returned from first\n";
+
+            }
+            close(fd[1]);
+            //close(fd[0]);
+            pid_t child_two = fork();
+
+
+
+            if (child_two == 0)
+            {
+                close(fd[1]);
+                dup2(fd[0], 0);
+                close(fd[0]);
+                singleCommand(input[1], dr);
+                //close(fd[0]);
+                cout << "Returned from sccnd\n";
+            }
+
+
+            //close(fd[1]);
+            close(fd[0]);
+            waitpid(child_one, NULL, 0);
+            waitpid(child_two, NULL, 0);
+            //if there is a '&' you dont have to wait 
+
+        }
+        cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
         input.clear();
         current_command.clear();
         temporary.clear();
@@ -370,11 +415,11 @@ int main (int argc, char *argv[], char * const env[])
 
 bool singleCommand (vector<string> current_command, string wd)
 {
-    cout << current_command[0] << "! !!!!\n";
-    cout << wd << "\n";
+    //cout << current_command[0] << "! !!!!\n";
+    //cout << wd << "\n";
     if (current_command[0].compare("pwd") == 0)
         {
-            cout << "Here" << "\n";
+            //cout << "Here" << "\n";
             write(1, "\n", 1);
             printString(wd);//Subject to change size of this
             write(1, "\n", 1);
@@ -388,13 +433,13 @@ bool singleCommand (vector<string> current_command, string wd)
 
         if (current_command[1] == "..")
         {
-            cout << "It is " << wd << "\n";
+            //cout << "It is " << wd << "\n";
             path = "";
             for(int j = wd.size() - 1; j >=  0; j--)
             {
                 if (wd[j] == '/')
                 {
-                    cout << "Found at " << j << "\n";
+                    //cout << "Found at " << j << "\n";
                     //cout << "We got a hit and it is " << dr << " at " << j << " \n";
                     for(int k = 0; k < j; k++)
                     {
@@ -513,24 +558,14 @@ bool singleCommand (vector<string> current_command, string wd)
     } 
     else //outside command + piping
     {
-        string new_argument;
-        int pickup;
+
     
         vector<string> arguments;
-        //cout << "First part is " << FirstPart << "\n";
 
-        //sarguments.push_back(current_command[0]);//The name of the executable
-        //First part is the 'program'
         char duh[255];
         char* other = getcwd(duh, 255);
-        cout << string(other) << "\n";
-        cout << "The size is " << current_command.size() << "\n";
 
-        //cout << "Here\n";
-        
-        //cout << "HAHAH\n";
-        //cout << "Size before " << arguments.size() << "\n";
-        char** args = new char*[current_command.size()];
+        char** args = new char*[current_command.size() + 1];
         //arguments.push_back("\0");
         //cout << "After " << arguments.size() << "\n";
 
@@ -541,7 +576,7 @@ bool singleCommand (vector<string> current_command, string wd)
             args[b] = new char[current_command[b].size()];
             //cout << "b is " << b << "\n";
             strcpy(args[b],current_command[b].c_str());
-            cout << "'"<<args[b]<<"'"<< "\n";
+            //cout << "'"<<args[b]<<"'"<< "\n";
 
         }
 
@@ -549,337 +584,16 @@ bool singleCommand (vector<string> current_command, string wd)
         // args[current_command.size()][0] = '\0';
         args[current_command.size()] = (char*)NULL;
 
-
+    // if (piping){
+    //     execvp(arguments[0], arguments)
+    // }
+ //else{
         outsideCommand(current_command[0], args, current_command.size());
+    // }
+        
 
         //cout << "THE PIPE \n";
     }     
 
     return false;
 }
-/*
-//////////////////
-
-        if (FirstPart.compare("pwd") == 0)
-        {
-            write(1, "\n", 1);
-            printString(dr);//Subject to change size of this
-        }
-        
-        //cd command implementation
-        //cout << "i is " << i << "\n";
-        //cout << "size is " << command.size() << "\n";
-
-        
-        else if (FirstPart.compare("cd") == 0)
-        {
-            //Get the path
-            for (int k = i + 1; k < command.size(); k++)
-            {
-                if (command[k] == ' ')
-                {
-                    continue;
-                }
-                else
-                {
-                    path.push_back(command[k]);
-                }
-            }
-            
-            for (int j = 0; j < path.size(); j++)
-            {
-                cout << path[j];
-            }
-            
-
-            if (path == "..")
-            {
-                cout << "It is " << dr << "\n";
-                path = "";
-                for(int j = dr.size() - 1; j >=  0; j--)
-                {
-                    if (dr[j] == '/')
-                    {
-                        cout << "Found at " << j << "\n";
-                        //cout << "We got a hit and it is " << dr << " at " << j << " \n";
-                        for(int k = 0; k < j; k++)
-                        {
-                            path.push_back(dr[k]);
-                        }
-                        //cout << "Path is " << path << " with length " << path.size() << "\n";
-                        break;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-
-                }
-
-            }//Parent directory
-            const char* new_path = path.c_str();
-            int newDir = chdir(new_path);
-            if (newDir == 0)
-            {
-                //write(1, "\n", 1); 
-                //continue;
-                cout << "Opened  \n";
-            }
-            write(1, "\n", 1); 
-        }
-        
-        else if (FirstPart.compare("exit") == 0)
-        {
-            write(1, "\n", 1);
-            ResetCanonicalMode(0, &Attributes);
-            exit(1);
-        }
-        else if (FirstPart.compare("ff") == 0){
-
-            // cout << "made it to ff" << "\n";
-            // parse other parters of command
-            bool has_one_sep_only = false; // only has one separation in command
-            bool has_two_sep = false;
-            bool previous_space = false;
-            string ff_filename; // TODO: allocate memory with 'new'
-            string ff_directory;
-            // cout << "i: " << i << "\n";
-            // cout << "size of command: " << command.size() << "\n";
-
-            for (int m = i; m < command.size(); m++)
-            {
-                
-                // cout << "m: " << m << "\n";
-                if (command[m] == ' ')
-                {
-                    continue;
-                }
-                else // non-space character, start inputting filename
-                {
-                    cout << "First space at " << m << "\n";
-                    int numerator = m;
-                    for(; numerator < command.size(); numerator++)
-                    {
-                        if (command[numerator] == ' ')
-                        {
-                            break;//End of the filename
-                        }
-                        else
-                        {
-                            ff_filename.push_back(command[numerator]);
-                        }
-                    }//At end of this numerator is at the first space after the filename
-
-                    for (; numerator < command.size(); numerator++)
-                    {
-                        if (command[numerator] == ' ')
-                        {
-                            continue;
-                        } //Skip any spaces between filename and directory
-                        else
-                        {
-                            for(; numerator < command.size(); numerator++)
-                            {
-                                ff_directory.push_back(command[numerator]);
-                            }
-                            break;
-                        }
-                    }
-                    break;
-
-                }
-            }
-
-            write(1, "\n", 1);
-            
-            const char *ff_dir_char = ff_directory.c_str();
-            const char *ff_filename_char = ff_filename.c_str();
-            cout << "filename: " << ff_filename << "\n";
-            cout << "directory: " << ff_directory << "\n";
-            //SUbject to change!!!
-            //int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
-            int move = chdir(ff_dir_char);
-            if (move < 0)
-            {
-                cout << "NOO\n";
-            }
-            ff_dir_char = getcwd(backup, 255);
-            ff_directory = string(ff_dir_char);
-            cout << "Calling... \n";
-            ff_recurse(ff_dir_char, ff_filename_char, ff_directory);
-            //Move back to our initial directory
-            chdir(ptr);
-
-        }
-        
-        else if (FirstPart.compare("ls") == 0)
-        {
-            cout << "HI\n";
-            if (i == command.size())//There is no path
-            {
-                new_path = ptr;
-                //getcwd
-            }
-            else
-            {
-                for (int l = i + 1; l < command.size(); l++)
-                {
-                    path.push_back(command[l]);
-                }
-                new_path = path.c_str();
-            }
-            
-            //fork here 
-            DIR *ls_directory;
-            struct dirent *ls_struct;
-            if ((ls_directory = opendir(new_path)) == NULL){
-                write(1, "ERROR", 5);
-            }
-            else{
-                while ((ls_struct = readdir(ls_directory)) != NULL){
-                    
-                    int q = 0;
-                    struct stat stats_struct;
-                    stat(ls_struct->d_name, &stats_struct);
-                    
-                    //write("File Permissions: \t");
-                    write(1, (S_ISDIR(stats_struct.st_mode)) ? "d" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IRUSR) ? "r" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IWUSR) ? "w" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IXUSR) ? "x" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IRGRP) ? "r" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IWGRP) ? "w" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IXGRP) ? "x" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IROTH) ? "r" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IWOTH) ? "w" : "-", 1);
-                    write(1, (stats_struct.st_mode & S_IXOTH) ? "x" : "-", 1);
-                    write(1, " ", 1);
-                    
-                    while (ls_struct->d_name[q] != '\0')
-                    {
-                        write(1, &ls_struct->d_name[q], 1);
-                        q++;
-                    }
-                    write(1, "\n", 1);
-                    
-                    
-                    //write(1, ls_struct->d_name, 20);
-                    //cout << ls_struct->d_name << "\n";
-                    //write(1, "\n", 1);
-                }
-            }
-            closedir(ls_directory);
-            
-        }
-
-        else //outside command + piping
-        {
-            string new_argument;
-            int pickup;
-        
-            vector<string> arguments;
-            cout << "First part is " << FirstPart << "\n";
-
-            arguments.push_back(FirstPart);
-            //First part is the 'program'
-
-            cout << "The size is " << command.size() << "\n";
-
-            for(int h = i; h < command.size(); h++)
-            {
-                //cout << " h is " << h << "\n";
-                if (command[h] == ' ')
-                {
-                    continue;
-                }
-                else
-                {
-                    int j = h;
-                    for(; j < command.size(); j++)
-                    {
-                        //cout << "j is " << j << "\n";
-                        if (command[j] == ' ')
-                        {
-                            //cout << "New arg was " << new_argument << "\n";
-                            pickup = j;
-                            //TBD
-                            new_argument.push_back('\0');
-                            arguments.push_back(new_argument);
-                            break;
-                        }
-                        else
-                        {
-                            new_argument.push_back(command[j]);
-
-                        }
-
-                    }
-
-                    if (j == command.size())
-                    {
-                        new_argument.push_back('\0');
-                        arguments.push_back(new_argument);
-                        pickup = -1;
-                    }
-
-
-                }
-                new_argument = "";
-                if (pickup == -1)
-                {
-                    break;
-                }
-                else
-                {
-                    h = pickup;
-
-                }
-            }
-            //cout << "Here\n";
-            
-            //cout << "HAHAH\n";
-            //cout << "Size before " << arguments.size() << "\n";
-            char** args = new char*[arguments.size() + 1];
-            //arguments.push_back("\0");
-            //cout << "After " << arguments.size() << "\n";
-
-
-            for(int b = 0; b < arguments.size(); b++)
-            {
-                args[b] = new char[arguments[b].size()];
-                //cout << "b is " << b << "\n";
-                strcpy(args[b],arguments[b].c_str());
-                cout << "'"<<args[b]<<"'"<< "\n";
-
-            }
-
-            //args[arguments.size()] = new char[1];
-            //args[arguments.size()][0] = '\0';
-
-
-            outsideCommand(FirstPart, args, env);
-
-            //cout << "THE PIPE \n";
-        }
-        
-        
-        //size = 0; //Reset the command
-        command = "";
-        FirstPart = "";
-        path = "";
-        //Empty out the string again
-        //fork, open new file, dup2, call the command
-        //call pipe before the fork 
-        //if you are a child close down the write of pipe bc you wont need it 
-    }
-    
-    
-  
-    
-    
-    ResetCanonicalMode(0, &Attributes);
-    return 0;
-    
-}
-
-*/
