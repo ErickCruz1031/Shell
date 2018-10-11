@@ -14,12 +14,12 @@
 
 using namespace std;
 
-void singleCommand (vector<string> current_command, string wd);
+bool singleCommand (vector<string> current_command, string wd);
 void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
 
-void outsideCommand(string command, char* const* arguments, char * const environ[])
+void outsideCommand(string command, char* const* arguments, int num_args)
 {
     char cwd[250];
     char* dir = getcwd(cwd, 250);
@@ -28,13 +28,20 @@ void outsideCommand(string command, char* const* arguments, char * const environ
     //char* const environ = env_vars;
     const char *com_str = command.c_str();
     char* p = getenv("PATH");
+    cout << "Arguments ...\n";
+
+    for(int i = 0; i < num_args; i++)
+    {
+        cout << "'" << string(arguments[i]) << "'" << "\n";
+    }
 
     pid_t pid = fork(); // 
     if (pid == 0)
     {
-        if (execvp(com_str, arguments) == -1)
+        if (execvp(arguments[0], arguments) == -1)
         {
             cout << "ERROR \n";
+            cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
         }
         else
         {
@@ -101,9 +108,6 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     else{ // reached a directory
 
         string temp;
-
-        //cout << "Opened " << str_current_dir << "\n";
-        //cout << "Before " << last_dir << "\n";
         if (last_dir == str_current_dir)
         {
             temp = last_dir;
@@ -215,14 +219,15 @@ int main (int argc, char *argv[], char * const env[])
     char newLine = '\n';
     const char* new_path;
     string current_command;
-    vector<vector<string> > input;
-    vector<string> temporary;
-    int current_index = 0;
+
     
     //input.resize(1);
     SetNonCanonicalMode(0, &Attributes);
     while (!loop_exit)
     {
+        vector<vector<string> > input;
+        vector<string> temporary;
+        int current_index = 0;
         ptr = getcwd(directory, 255);
         dr = string(ptr);
 
@@ -341,10 +346,17 @@ int main (int argc, char *argv[], char * const env[])
         cout << input.size() << "\n";
         if (input.size() == 1)//No piping
         {
-            singleCommand(input[0], dr);
+            bool done = singleCommand(input[0], dr);
+            if (done == true)
+            {
+                ResetCanonicalMode(0, &Attributes);
+                exit(1);
+            }
 
         }
         input.clear();
+        current_command.clear();
+        temporary.clear();
 
     }
 
@@ -356,7 +368,7 @@ int main (int argc, char *argv[], char * const env[])
 
 
 
-void singleCommand (vector<string> current_command, string wd)
+bool singleCommand (vector<string> current_command, string wd)
 {
     cout << current_command[0] << "! !!!!\n";
     cout << wd << "\n";
@@ -371,12 +383,7 @@ void singleCommand (vector<string> current_command, string wd)
     else if (current_command[0].compare("cd") == 0)
     {
         //Get the path
-        /*
-        for (int j = 0; j < path.size(); j++)
-        {
-            cout << path[j];
-        }
-        */
+        
         string path;
 
         if (current_command[1] == "..")
@@ -419,9 +426,135 @@ void singleCommand (vector<string> current_command, string wd)
         write(1, "\n", 1); 
     }
 
-    return;
+    else if (current_command[0].compare("exit") == 0)
+    {
+        write(1, "\n", 1);
+        return true;
+    }
+    
+    else if (current_command[0].compare("ff") == 0)
+    {
+
+
+        //string ff_filename; // TODO: allocate memory with 'new'
+        string ff_directory;
+        write(1, "\n", 1);
+        char backup[255];
+
+        
+        const char *ff_dir_char = current_command[2].c_str();
+        const char *ff_filename_char = current_command[1].c_str();
+        cout << "filename: " << current_command[1] << "\n";
+        cout << "directory: " << current_command[2] << "\n";
+        //SUbject to change!!!
+        //int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
+        int move = chdir(ff_dir_char);
+        if (move < 0)
+        {
+            cout << "NOO\n";
+        }
+        ff_dir_char = getcwd(backup, 255);
+        ff_directory = string(ff_dir_char);
+        cout << "Calling... \n";
+        ff_recurse(ff_dir_char, ff_filename_char, ff_directory);
+        //Move back to our initial directory
+        chdir(wd.c_str());
+
+    }
+    else if (current_command[0].compare("ls") == 0)
+    {
+        const char* new_path;
+        if (current_command.size() == 1)
+        {
+            new_path = wd.c_str();
+        }
+        else
+        {
+            new_path = current_command[1].c_str();
+        }
+        
+        //fork here 
+        DIR *ls_directory;
+        struct dirent *ls_struct;
+        if ((ls_directory = opendir(new_path)) == NULL){
+            write(1, "ERROR", 5);
+        }
+        else{
+            while ((ls_struct = readdir(ls_directory)) != NULL){
+                
+                int q = 0;
+                struct stat stats_struct;
+                stat(ls_struct->d_name, &stats_struct);
+                
+                //write("File Permissions: \t");
+                write(1, (S_ISDIR(stats_struct.st_mode)) ? "d" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IRUSR) ? "r" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IWUSR) ? "w" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IXUSR) ? "x" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IRGRP) ? "r" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IWGRP) ? "w" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IXGRP) ? "x" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IROTH) ? "r" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IWOTH) ? "w" : "-", 1);
+                write(1, (stats_struct.st_mode & S_IXOTH) ? "x" : "-", 1);
+                write(1, " ", 1);
+                
+                while (ls_struct->d_name[q] != '\0')
+                {
+                    write(1, &ls_struct->d_name[q], 1);
+                    q++;
+                }
+                write(1, "\n", 1);
+
+            }
+        }
+        closedir(ls_directory);
+            
+    } 
+    else //outside command + piping
+    {
+        string new_argument;
+        int pickup;
+    
+        vector<string> arguments;
+        //cout << "First part is " << FirstPart << "\n";
+
+        //sarguments.push_back(current_command[0]);//The name of the executable
+        //First part is the 'program'
+
+        cout << "The size is " << current_command.size() << "\n";
+
+        //cout << "Here\n";
+        
+        //cout << "HAHAH\n";
+        //cout << "Size before " << arguments.size() << "\n";
+        char** args = new char*[current_command.size() + 1];
+        //arguments.push_back("\0");
+        //cout << "After " << arguments.size() << "\n";
+
+
+        for(int b = 0; b < current_command.size(); b++)
+        {
+            current_command[b].push_back('\0');
+            args[b] = new char[current_command[b].size()];
+            //cout << "b is " << b << "\n";
+            strcpy(args[b],current_command[b].c_str());
+            cout << "'"<<args[b]<<"'"<< "\n";
+
+        }
+
+        //args[current_command.size()] = new char[1];
+        //args[current_command.size()][0] = '\0';
+
+
+        outsideCommand(current_command[0], args, current_command.size());
+
+        //cout << "THE PIPE \n";
+    }     
+
+    return false;
 }
-/*
+//////////////////
 
         if (FirstPart.compare("pwd") == 0)
         {
