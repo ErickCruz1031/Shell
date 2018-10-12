@@ -1,3 +1,3 @@
 ashell: aShell.cpp
-	g++ -Wall -c aShell.cpp 
+	g++ -o ashell aShell.cpp 
 

@@ -1,8 +1,6 @@
 Erick Cruz (SID: 912269308)
 Vanessa Kha (SID: 914134981)
 
-https://stackoverflow.com/questions/16094814/implementing-cd-system-call-using-c-if-condition
-
 http://codewiki.wikidot.com/c:system-calls:stat
 
 https://stackoverflow.com/questions/15883568/reading-from-stdin
