@@ -19,10 +19,17 @@ void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
 
-void outsideCommand(string command, char* const* arguments, int num_args)
+void outsideCommand(char* const* arguments, int num_args)
 {
     int status;
-
+    /*
+    cout << "\nPrinting arguments\n";
+    for(int i = 0; i < num_args; i++)
+    {
+        cout << string(arguments[i]);
+        cout << "\n";
+    }
+    */
     //cout << "hello there\n";
     pid_t pid = fork(); // 
     if (pid == 0)
@@ -42,16 +49,16 @@ void outsideCommand(string command, char* const* arguments, int num_args)
         }
         */
     }
-    /*
+    
     else
     {
         cout << "PARENT\n";
-        //int child_pid = waitpid(pid, &status, 0);
+        int child_pid = waitpid(pid, &status, 0);
         //cout << "Status is " << status << " and other is " << child_pid << "\n";
-        //cout << "Finished from " << child_pid << "\n";
+        cout << "Finished from " << child_pid << "\n";
     }
     cout << "RETURN\n";
-    */
+    
 
     return;
 
@@ -324,7 +331,7 @@ int main (int argc, char *argv[], char * const env[])
             
         }
         //cout << "The size is " << size << "\n";
-        /*
+        
         int i = 0;
         cout << "\n" << "Printing...\n";
         for(int i = 0; i < input.size(); i++)
@@ -339,7 +346,7 @@ int main (int argc, char *argv[], char * const env[])
             
         }//Get length of the command
         //cout << current_command << "\n";
-        */
+        
 
             //now all the commands are in input
         //cout << "Before it is " << dr << "\n";
@@ -356,6 +363,7 @@ int main (int argc, char *argv[], char * const env[])
         }
         else
         {
+            cout << "\n";
             int fd[2];
             int status;
 
@@ -365,34 +373,63 @@ int main (int argc, char *argv[], char * const env[])
 
             if (child_one == 0)
             {
-                close(fd[0]);
-                dup2(fd[1], 1);
-                close(fd[1]);
-                cout << "executing first\n";
-                singleCommand(input[0], dr);
 
-                cout << "returned from first\n";
+                char** args = new char*[input[0].size() + 1];
+                for(int k = 0; k < input[0].size(); k++)
+                {
+                    args[k] = new char[input[0][k].size()];
+                    input[0][k].push_back('\0');
+                    strcpy(args[k],input[0][k].c_str());
+
+                }
+                args[input[0].size()] = new char[1];
+                // args[current_command.size()][0] = '\0';
+                args[input[0].size()] = (char*)NULL;
+
+                dup2(fd[1], 1);
+                close(fd[0]);
+                close(fd[1]);
+                execvp(args[0], args);
+
+                //cout << "returned from first\n";
 
             }
-            close(fd[1]);
-            //close(fd[0]);
+
             pid_t child_two = fork();
 
 
 
             if (child_two == 0)
             {
-                close(fd[1]);
+                char** args = new char*[input[1].size() + 1];
+
+                for(int k = 0; k < input[1].size(); k++)
+                {
+                    args[k] = new char[input[1][k].size()];
+                    input[1][k].push_back('\0');
+                    strcpy(args[k],input[1][k].c_str());
+
+                }
+
+                args[input[1].size()] = new char[1];
+                // args[current_command.size()][0] = '\0';
+                args[input[1].size()] = (char*)NULL;
+                //close(fd[1]);
+                cout << "Child\n";
                 dup2(fd[0], 0);
                 close(fd[0]);
-                singleCommand(input[1], dr);
+                close(fd[1]);
+                execvp(args[0], args);
                 //close(fd[0]);
-                cout << "Returned from sccnd\n";
+                //singleCommand(input[1], dr);
+                //close(fd[0]);
+                //cout << "Returned from sccnd\n";
             }
 
 
             //close(fd[1]);
             close(fd[0]);
+            close(fd[1]);
             waitpid(child_one, NULL, 0);
             waitpid(child_two, NULL, 0);
             //if there is a '&' you dont have to wait 
@@ -588,7 +625,7 @@ bool singleCommand (vector<string> current_command, string wd)
     //     execvp(arguments[0], arguments)
     // }
  //else{
-        outsideCommand(current_command[0], args, current_command.size());
+        outsideCommand(args, current_command.size());
     // }
         
 
