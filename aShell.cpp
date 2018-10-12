@@ -11,6 +11,7 @@
 #include <vector>
 #include <signal.h>
 #include <sys/wait.h>
+#include <deque>
 
 using namespace std;
 
@@ -22,42 +23,21 @@ void ResetCanonicalMode(int fd, struct termios *savedattributes){
 void outsideCommand(char* const* arguments, int num_args)
 {
     int status;
-    /*
-    cout << "\nPrinting arguments\n";
-    for(int i = 0; i < num_args; i++)
-    {
-        cout << string(arguments[i]);
-        cout << "\n";
-    }
-    */
-    //cout << "hello there\n";
+    string command = string(arguments[0]);
+
     pid_t pid = fork(); // 
     if (pid == 0)
     {
-        //cout << "sogknva\n";
         execvp(arguments[0], arguments);
-        //cout << "Exec worked\n";
-        /*
-        if (execvp(arguments[0], arguments) == -1)
-        {
-            //cout << "ERROR \n";
-            //cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
-        }
-        else
-        {
-            //cout << "success\n";
-        }
-        */
+        write(1, "Failed to execute ", 18);
+        write(1, arguments[0], command.size());
+        write(1, "\n", 1);
     }
     
     else
     {
-        cout << "PARENT\n";
-        int child_pid = waitpid(pid, &status, 0);
-        //cout << "Status is " << status << " and other is " << child_pid << "\n";
-        cout << "Finished from " << child_pid << "\n";
+        waitpid(pid, &status, 0);
     }
-    cout << "RETURN\n";
     
 
     return;
@@ -76,10 +56,8 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     char directory[250];
     string file_path; 
 
-    // cout << "Opening " << str_current_dir << "\n";
     char *ptr = getcwd(directory, 250);
     string str_ptr(ptr);
-    //cout << "current: " << str_ptr << " with " << str_current_dir << "\n";
 
     if ((str_current_dir.compare(".") == 0) || (str_current_dir.compare("..") == 0)){
         return false;
@@ -88,15 +66,12 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
     {
         return false;
     }
-    //cout << "Current directory ff: " << str_current_dir << "\n";
     if ((ff_dir = opendir(current_dir)) == NULL)
     {
-        //write(1, "ERROR", 5);
         // reached a file-- base case
         if (str_current_dir.compare(str_filename) == 0) // found a match
         {
 
-            //cout << "MATCH \n";
             file_path = str_ptr + "/" + str_filename;
             // print the file
 
@@ -124,9 +99,6 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
             temp = last_dir + "/" + str_current_dir;
         }
 
-
-        //cout << "Just opened "  << temp << "\n";
-        //cout << "Other one is " << str_current_dir << "\n";
         chdir(temp.c_str());
 
         while ((ff_struct = readdir(ff_dir)) != NULL)
@@ -138,7 +110,6 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
                 i++;
             }
             ff_recurse(ff_struct->d_name, filename, temp);
-            //cout << "RETURNRED from " << ff_struct->d_name << "\n";
         }
         chdir(last_dir.c_str());
         return false;
@@ -147,7 +118,6 @@ bool ff_recurse(const char* current_dir, const char* filename, string last_dir){
 }
 void SetNonCanonicalMode(int fd, struct termios *savedattributes){
     struct termios TermAttributes;
-    char *name;
     
     // Make sure stdin is a terminal.
     if(!isatty(fd)){
@@ -182,7 +152,6 @@ string truncateString(string Line)
         if (Line[k] == '/')
         {
             New = "/.../";
-            //cout << "Initial k is " << k << "\n";
             for (int j = k + 1; j < Line.size(); j++)
             {
                 New.push_back(Line[j]);
@@ -206,34 +175,40 @@ int main (int argc, char *argv[], char * const env[])
     char buffer;
     string command;
     char directory[255];
-    char backup[255];
-    bool Arrow_One = false;
-    bool Arrow_Two = false;
+    
+    
+    
     string FirstPart;
     string temp2;
-    string** past_commands;
-    string path;
+   
     string dr;
-    char* cwd;
+    
     char* ptr;
-    char* parsed;
+    
     //int size = 0;
-    char temp;
+    
     struct termios Attributes;
     bool loop_exit = false;
     char endChar = '%';
-    char newLine = '\n';
-    const char* new_path;
-    string current_command;
-
     
-    //input.resize(1);
+    
+    string current_command;
+    vector<vector<string> > input;
+    vector<string> temporary;
+
     SetNonCanonicalMode(0, &Attributes);
+    int history_index = 0;
+    
+    int history_size = 0;
+    string history_str;
+    deque<string> history_queue;
+    const char *new_history_char;
+
+    string new_history_str;
     while (!loop_exit)
     {
-        vector<vector<string> > input;
-        vector<string> temporary;
-        int current_index = 0;
+        
+        
         ptr = getcwd(directory, 255);
         dr = string(ptr);
 
@@ -252,12 +227,23 @@ int main (int argc, char *argv[], char * const env[])
         write(1, " ", 1);
         //Print the current directory
         
+        //https://stackoverflow.com/questions/15883568/reading-from-stdin
+        
         while(read(0, &buffer, 1) > 0)
         {
             //cout << "hi!!!! \n";
-        
-            if (int(buffer) == 32)
+
+            // COMMAND HISTORY QUEUE
+            
+            if (buffer == '\a'){
+                history_str.push_back(buffer); // add character to history string
+                continue;
+            }
+            
+            // ------------------
+            else if (int(buffer) == 32) // space
             {
+                history_str.push_back(buffer); // add character to history string
                 write(1, &buffer, 1);
                 if (!current_command.empty())
                 {
@@ -267,37 +253,136 @@ int main (int argc, char *argv[], char * const env[])
                 continue;
             }
 
-            else if(int(buffer) ==  127)
+            else if(int(buffer) ==  127) //Implement the backspace
             {
                 //cout << "Delete key!\n";
                 write(1, "\b \b", 3);
+                current_command.pop_back();
+                // remove characters from history_str
+                if (history_str.size() > 0){
+                    history_str.erase(history_str.begin() + history_str.size() - 1);
+                }
                 continue;
+
             }
         
-           //Implement the backspace
-            else if (int(buffer) == 27) //Check to see if it is the arrow
+            //Check to see if it is the arrow
+                     // we always start one past the last element of queue
+            // BELL if 
+                // history_index == 0 and UP pressed 
+                // history_index == history_size and DOWN pressed
+            // special cases
+                // history_index == history_size - 1 and DOWN --> show an empty line
+                // history_index == history_size and UP --> clear string read and show empty if returned here
+            // else
+                // UP --> history_index-- and show history_queue[history_index]
+                // DOWN --> history_index++ and show history_queue[history_index]
+                // then 
+
+            // Nitta's example command history special case:
+            // Implement/ ask about this later.
+                // 1)  UP --> history_index --, show history[history_index]
+                // 2) continue to edit starting with above text ^
+                // 3) '\n' --> output appears
+                // 4) UP again --> shows the same history[history_index] as before ^
+                // 5) DOWN --> shows the editted command
+
+
+            else if (int(buffer) == 27) // ESCAPE
             {
-                read(0, &buffer, 1);
-                if (int(buffer) == 91)
+                read(0, &buffer, 1); 
+                if (int(buffer) == 91) // [
                 {
+
+
                     read(0, &buffer, 1);               
-                    if(int(buffer) == 65)
-                    {
-                        cout << "This was the up arrow!\n";
+                    if(int(buffer) == 65) // A
+                    { // UP ARROW 
+                        new_history_str = history_str;
+                        if (history_index == 0){
+                            write(1, "\a", 1);
+                        }
+                        else{
+                            history_str.clear(); 
+                            history_index--;
+                            //cout << "decremented index to " << history_index << "\n";
+                            for (int n = 0; n <new_history_str.size(); n++){
+                                write(1, "\b", 1);
+                            } // clear 
+
+                            // show previous entry
+                            new_history_str = history_queue[history_index]; // shallow copy?
+                            current_command = new_history_str;
+                            new_history_char = new_history_str.c_str();
+
+                            for (int j = 0; j < new_history_str.size(); j++){
+                                write(1, &new_history_char[j], 1);
+                                history_str.push_back(new_history_str[j]);
+                            }
+                            new_history_char = "";
+                           // TODO: Somehow continue parsing into input vector<vector<string>>
+                            // Problem: can't write to actual stdin in such a way that program actually 
+                                // reads from it (would need redirection)
+
+
+                        }
+
+                        
                     }
-                    else if (int(buffer) == 66)
+                    else if (int(buffer) == 66) //B
                     {
-                        cout << "This was the down arrow \n";
+
+                        new_history_str = history_str;
+                        if (history_index == history_size){
+                            write(1, "\a", 1);
+                        }
+                        else{
+                            history_str.clear(); 
+                            history_index++;
+                        // remove previous output from screen
+                            for (int p = 0; p < new_history_str.size(); p++){
+                                write(1, "\b", 1);
+                            }
+                            new_history_char = new_history_str.c_str();
+                            if (history_index < history_size){
+                                // don't want to access history_queue[history_size] --> segfault
+                                new_history_str = history_queue[history_index];
+                                for (int q = 0; q < new_history_str.size(); q++){
+                                    write(1, &new_history_char[q], 1);
+                                    history_str.push_back(new_history_str[q]);
+                                }
+                            }
+                            else{
+                                // TODO
+
+                            }
+                            new_history_char = "";
+
+                            
+                        }
+                        
+
+                    
                     }
                 }
             }
 
             else if (buffer == '\n')
             {
+                write(1, &buffer, 1);
+                history_queue.push_back(history_str); // add string to queue
+                history_size++; // increment size of queue
+                history_index = history_size;
+                if (history_queue.size() > 10){
+                    history_queue.pop_front(); // if there are more than 10 commands, get rid of one
+                    history_size--; 
+                }
+                history_str.clear();
+                new_history_str.clear();
+
                 if (!current_command.empty())
                 {
                     temporary.push_back(current_command);
-
                 }
 
                 if (!temporary.empty())
@@ -308,175 +393,122 @@ int main (int argc, char *argv[], char * const env[])
             }
             else if (buffer == '|')
             {
-                //input.resize(1);
-                //input[current_index].push_back(current_command);
+                write(1, "|", 1);
+                history_str.push_back(buffer); // add character to history string
                 if (!current_command.empty())
                 {
                     temporary.push_back(current_command);
                 }
-                //temporary.push_back(current_command);
+
                 input.push_back(temporary);
-                //current_index++;
                 temporary.clear();
                 current_command = "";
-                //current_command = "";
 
             }
             else
             {
+                write(1, &buffer, 1);
+                history_str.push_back(buffer); // add character to history string
                 current_command.push_back(buffer);
             }
-            write(1, &buffer, 1);
-            //dummy++;
             
         }
-        //cout << "The size is " << size << "\n";
-        
-        int i = 0;
-        cout << "\n" << "Printing...\n";
-        for(int i = 0; i < input.size(); i++)
+        while(input.size() >= 1)
         {
-            
-            //cout << "Pushing back" << command[i] << "AHHH\n";
-            for(int k = 0; k < input[i].size(); k++)
+
+
+            if (input.size() == 1)//No piping
             {
-                cout << "'" << input[i][k] << "'";
-            }
-            cout << "\n";
-            
-        }//Get length of the command
-        //cout << current_command << "\n";
-        
-
-            //now all the commands are in input
-        //cout << "Before it is " << dr << "\n";
-        //cout << input.size() << "\n";
-        if (input.size() == 1)//No piping
-        {
-            bool done = singleCommand(input[0], dr);
-            if (done == true)
-            {
-                ResetCanonicalMode(0, &Attributes);
-                exit(1);
-            }
-
-        }
-        else
-        {
-            cout << "\n";
-            int fd[2];
-            int status;
-
-            pipe(fd);
-
-            pid_t child_one = fork();
-
-            if (child_one == 0)
-            {
-
-                cout << "Child with oneee " << input[0][0] << "\n";
-                bool inner = false;
-                if((input[0][0] == "ls")|| (input[0][0] == "pwd") || (input[0][0] == "ff"))
+                //!!!!!!!!!!!!!!!!!
+                bool done = singleCommand(input[0], dr);
+                //out << "First one\n";
+               
+                if (done == true)
                 {
-                    cout << "Inner command!\n";
-                    inner = true;
+                    ResetCanonicalMode(0, &Attributes);
+                    exit(1);
                 }
-
-                char** args = new char*[input[0].size() + 1];
-                for(int k = 0; k < input[0].size(); k++)
-                {
-                    args[k] = new char[input[0][k].size()];
-                    input[0][k].push_back('\0');
-                    strcpy(args[k],input[0][k].c_str());
-
-                }
-                args[input[0].size()] = new char[1];
-                // args[current_command.size()][0] = '\0';
-                args[input[0].size()] = (char*)NULL;
-
-
-                dup2(fd[1], 1);
-                //close(fd[0]);
-                //close(fd[1]);
-                if (!inner)
-                {
-                    close(fd[0]);
-                    close(fd[1]);
-                    execvp(args[0], args);
-                }
-                else
-                {
-                    close(fd[0]);
-                    singleCommand(input[0], dr);
-                    close(fd[1]);
-                }
-                //execvp(args[0], args);
-
-                //cout << "returned from first\n";
+                input.erase(input.begin());
 
             }
-
-            pid_t child_two = fork();
-
-
-
-            if (child_two == 0)
+            else
             {
-                bool inner_process = false;
-                cout << "Child with " << input[1][0] << "\n";
-                if((input[1][0] == "ls")|| (input[1][0] == "pwd") || (input[1][0] == "ff"))
-                {
-                    cout << "Inner command in 2 AHHHHH!\n";
-                    inner_process = true;
-                }
-                char** args = new char*[input[1].size() + 1];
-
-                for(int k = 0; k < input[1].size(); k++)
-                {
-                    args[k] = new char[input[1][k].size()];
-                    input[1][k].push_back('\0');
-                    strcpy(args[k],input[1][k].c_str());
-
-                }
-
-                args[input[1].size()] = new char[1];
-                // args[current_command.size()][0] = '\0';
-                args[input[1].size()] = (char*)NULL;
-                //close(fd[1]);
-                cout << "About to call\n";
-                dup2(fd[0], 0);
-                //close(fd[0]);
-                //close(fd[1]);
+                //http://alumni.cs.ucr.edu/~drougas/code-samples-tutorials/pipe-redirection.c
+                //cout << "\n";
+                int fd[2];
                 
-                if (!inner_process)
+
+                pipe(fd);
+
+
+
+                pid_t child_one = fork();
+                if (child_one == 0)
                 {
+                    char** args = new char*[input[0].size() + 1];
+                    for(int k = 0; k < input[0].size(); k++)
+                    {
+                        args[k] = new char[input[0][k].size()];
+                        input[0][k].push_back('\0');
+                        strcpy(args[k],input[0][k].c_str());
+
+                    }
+                    args[input[0].size()] = new char[1];
+                    // args[current_command.size()][0] = '\0';
+                    args[input[0].size()] = (char*)NULL;
+                    dup2(fd[1], 1);
                     close(fd[0]);
                     close(fd[1]);
                     execvp(args[0], args);
+
+                    string command = string(args[0]);
+                    write(1, "Failed to execute ", 18);
+                    write(1, args[0], command.size());
+                    write(1, "\n", 1);
+
+
                 }
-                else
+
+                //pid_t child_one = fork();
+
+                pid_t child_two = fork();
+                if (child_two == 0)
                 {
-                    close(fd[1]);  
-                    singleCommand(input[1], dr);
+                    char** args = new char*[input[1].size() + 1];
+
+                    for(int k = 0; k < input[1].size(); k++)
+                    {
+                        args[k] = new char[input[1][k].size()];
+                        input[1][k].push_back('\0');
+                        strcpy(args[k],input[1][k].c_str());
+
+                    }
+
+                    args[input[1].size()] = new char[1];
+                    // args[current_command.size()][0] = '\0';
+                    args[input[1].size()] = (char*)NULL;
+
+                    dup2(fd[0], 0);
                     close(fd[0]);
+                    close(fd[1]);                
+                    execvp(args[0], args);
+
+                    string command = string(args[0]);
+                    write(1, "Failed to execute ", 18);
+                    write(1, args[0], command.size());
+                    write(1, "\n", 1);
                 }
-                //execvp(args[0], args);
-                //close(fd[0]);
-                //singleCommand(input[1], dr);
-                //close(fd[0]);
-                //cout << "Returned from sccnd\n";
+                close(fd[0]);
+                close(fd[1]);
+                //cout << "Waiting\n";
+                waitpid(child_one, NULL, 0);
+                waitpid(child_two, NULL, 0);
+
+                input.erase(input.begin());
+                input.erase(input.begin());
+
             }
-
-
-            //close(fd[1]);
-            close(fd[0]);
-            close(fd[1]);
-            waitpid(child_one, NULL, 0);
-            waitpid(child_two, NULL, 0);
-            //if there is a '&' you dont have to wait 
-
         }
-        cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
         input.clear();
         current_command.clear();
         temporary.clear();
@@ -493,12 +525,10 @@ int main (int argc, char *argv[], char * const env[])
 
 bool singleCommand (vector<string> current_command, string wd)
 {
-    //cout << current_command[0] << "! !!!!\n";
-    //cout << wd << "\n";
+
     if (current_command[0].compare("pwd") == 0)
         {
-            //cout << "Here" << "\n";
-            write(1, "\n", 1);
+
             printString(wd);//Subject to change size of this
             write(1, "\n", 1);
         }
@@ -508,22 +538,23 @@ bool singleCommand (vector<string> current_command, string wd)
         //Get the path
         
         string path;
+        if (current_command.size() == 1)
+        {
+            char* HOME = getenv("HOME");
+            chdir(HOME);
+        }
 
         if (current_command[1] == "..")
         {
-            //cout << "It is " << wd << "\n";
             path = "";
             for(int j = wd.size() - 1; j >=  0; j--)
             {
                 if (wd[j] == '/')
                 {
-                    //cout << "Found at " << j << "\n";
-                    //cout << "We got a hit and it is " << dr << " at " << j << " \n";
                     for(int k = 0; k < j; k++)
                     {
                         path.push_back(wd[k]);
                     }
-                    //cout << "Path is " << path << " with length " << path.size() << "\n";
                     break;
                 }
                 else
@@ -540,45 +571,31 @@ bool singleCommand (vector<string> current_command, string wd)
         }
         const char* new_path = path.c_str();
         int newDir = chdir(new_path);
-        if (newDir == 0)
+        if (newDir == -1)
         {
-            //write(1, "\n", 1); 
-            //continue;
-            cout << "Opened  \n";
+            write(1, "Error changing directory.\n", 27);
         }
-        write(1, "\n", 1); 
+        //write(1, "\n", 1); 
     }
 
     else if (current_command[0].compare("exit") == 0)
     {
-        write(1, "\n", 1);
         return true;
     }
     
     else if (current_command[0].compare("ff") == 0)
     {
-
-
-        //string ff_filename; // TODO: allocate memory with 'new'
         string ff_directory;
-        write(1, "\n", 1);
+       // write(1, "\n", 1);
         char backup[255];
 
         
         const char *ff_dir_char = current_command[2].c_str();
         const char *ff_filename_char = current_command[1].c_str();
-        cout << "filename: " << current_command[1] << "\n";
-        cout << "directory: " << current_command[2] << "\n";
-        //SUbject to change!!!
-        //int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
-        int move = chdir(ff_dir_char);
-        if (move < 0)
-        {
-            cout << "NOO\n";
-        }
+        chdir(ff_dir_char);
+  
         ff_dir_char = getcwd(backup, 255);
         ff_directory = string(ff_dir_char);
-        cout << "Calling... \n";
         ff_recurse(ff_dir_char, ff_filename_char, ff_directory);
         //Move back to our initial directory
         chdir(wd.c_str());
@@ -597,6 +614,7 @@ bool singleCommand (vector<string> current_command, string wd)
         }
         
         //fork here 
+        //https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtread.htm
         DIR *ls_directory;
         struct dirent *ls_struct;
         if ((ls_directory = opendir(new_path)) == NULL){
@@ -608,7 +626,8 @@ bool singleCommand (vector<string> current_command, string wd)
                 int q = 0;
                 struct stat stats_struct;
                 stat(ls_struct->d_name, &stats_struct);
-                
+
+                //http://codewiki.wikidot.com/c:system-calls:stat
                 //write("File Permissions: \t");
                 write(1, (S_ISDIR(stats_struct.st_mode)) ? "d" : "-", 1);
                 write(1, (stats_struct.st_mode & S_IRUSR) ? "r" : "-", 1);
@@ -636,41 +655,18 @@ bool singleCommand (vector<string> current_command, string wd)
     } 
     else //outside command + piping
     {
-
-    
-        vector<string> arguments;
-
-        char duh[255];
-        char* other = getcwd(duh, 255);
-
         char** args = new char*[current_command.size() + 1];
-        //arguments.push_back("\0");
-        //cout << "After " << arguments.size() << "\n";
-
-
         for(int b = 0; b < current_command.size(); b++)
         {
             current_command[b].push_back('\0');
             args[b] = new char[current_command[b].size()];
-            //cout << "b is " << b << "\n";
             strcpy(args[b],current_command[b].c_str());
-            //cout << "'"<<args[b]<<"'"<< "\n";
 
         }
 
         args[current_command.size()] = new char[1];
-        // args[current_command.size()][0] = '\0';
         args[current_command.size()] = (char*)NULL;
-
-    // if (piping){
-    //     execvp(arguments[0], arguments)
-    // }
- //else{
         outsideCommand(args, current_command.size());
-    // }
-        
-
-        //cout << "THE PIPE \n";
     }     
 
     return false;
