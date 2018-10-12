@@ -364,7 +364,7 @@ int main (int argc, char *argv[], char * const env[])
                            // }
                         
                             // else{
-                            //     // delete current entry 
+                          //     // delete current entry 
                             //     history_index--;
                             // }
                         
@@ -388,6 +388,7 @@ int main (int argc, char *argv[], char * const env[])
                                 history_str.push_back(new_history_str[j]);
                             }
                             new_history_char = "";
+                            current_command = new_history_str; //TENTATIVE
                            // TODO: Somehow continue parsing into input vector<vector<string>>
                             // Problem: can't write to actual stdin in such a way that program actually 
                                 // reads from it (would need redirection)
@@ -434,7 +435,7 @@ int main (int argc, char *argv[], char * const env[])
 
                             }
                             new_history_char = "";
-
+                            current_command = new_history_str; //TENTATIVE
                             
                         }
                         
