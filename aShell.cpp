@@ -11,6 +11,7 @@
 #include <vector>
 #include <signal.h>
 #include <sys/wait.h>
+#include <deque>
 
 using namespace std;
 
@@ -42,16 +43,16 @@ void outsideCommand(string command, char* const* arguments, int num_args)
         }
         */
     }
-    /*
+    
     else
     {
         cout << "PARENT\n";
-        //int child_pid = waitpid(pid, &status, 0);
+        int child_pid = waitpid(pid, &status, 0);
         //cout << "Status is " << status << " and other is " << child_pid << "\n";
         //cout << "Finished from " << child_pid << "\n";
     }
     cout << "RETURN\n";
-    */
+    
 
     return;
 
@@ -218,15 +219,23 @@ int main (int argc, char *argv[], char * const env[])
     char newLine = '\n';
     const char* new_path;
     string current_command;
-
-    
+    vector<vector<string> > input;
+    vector<string> temporary;
+    int current_index = 0;
     //input.resize(1);
     SetNonCanonicalMode(0, &Attributes);
+    int history_index = 0;
+    int input_size = 0;
+    int history_size = 0;
+    string history_str;
+    deque<string> history_queue;
+    const char *new_history_char;
+
+    string new_history_str;
     while (!loop_exit)
     {
-        vector<vector<string> > input;
-        vector<string> temporary;
-        int current_index = 0;
+        
+        
         ptr = getcwd(directory, 255);
         dr = string(ptr);
 
@@ -245,12 +254,23 @@ int main (int argc, char *argv[], char * const env[])
         write(1, " ", 1);
         //Print the current directory
         
+        
+        
         while(read(0, &buffer, 1) > 0)
         {
             //cout << "hi!!!! \n";
-        
-            if (int(buffer) == 32)
+
+            // COMMAND HISTORY QUEUE
+            
+            if (buffer == '\a'){
+                history_str.push_back(buffer); // add character to history string
+                continue;
+            }
+            
+            // ------------------
+            else if (int(buffer) == 32) // space
             {
+                history_str.push_back(buffer); // add character to history string
                 write(1, &buffer, 1);
                 if (!current_command.empty())
                 {
@@ -260,37 +280,173 @@ int main (int argc, char *argv[], char * const env[])
                 continue;
             }
 
-            else if(int(buffer) ==  127)
+            else if(int(buffer) ==  127) //Implement the backspace
             {
                 //cout << "Delete key!\n";
                 write(1, "\b \b", 3);
+                // remove characters from history_str
+                if (history_str.size() > 0){
+                    history_str.erase(history_str.begin() + history_str.size() - 1);
+                }
                 continue;
+
             }
         
-           //Implement the backspace
-            else if (int(buffer) == 27) //Check to see if it is the arrow
+            //Check to see if it is the arrow
+                     // we always start one past the last element of queue
+            // BELL if 
+                // history_index == 0 and UP pressed 
+                // history_index == history_size and DOWN pressed
+            // special cases
+                // history_index == history_size - 1 and DOWN --> show an empty line
+                // history_index == history_size and UP --> clear string read and show empty if returned here
+            // else
+                // UP --> history_index-- and show history_queue[history_index]
+                // DOWN --> history_index++ and show history_queue[history_index]
+                // then 
+
+            // Nitta's example command history special case:
+            // Implement/ ask about this later.
+                // 1)  UP --> history_index --, show history[history_index]
+                // 2) continue to edit starting with above text ^
+                // 3) '\n' --> output appears
+                // 4) UP again --> shows the same history[history_index] as before ^
+                // 5) DOWN --> shows the editted command
+
+
+            else if (int(buffer) == 27) // ESCAPE
             {
-                read(0, &buffer, 1);
-                if (int(buffer) == 91)
+                cout << "size of history queue is " << history_size << "\n";
+                read(0, &buffer, 1); 
+                if (int(buffer) == 91) // [
                 {
+
+
                     read(0, &buffer, 1);               
-                    if(int(buffer) == 65)
-                    {
-                        cout << "This was the up arrow!\n";
+                    if(int(buffer) == 65) // A
+                    { // UP ARROW 
+                        cout << "UP\n";
+
+                        // ca
+                        new_history_str = history_str;
+                        if (history_index == 0){
+                            // BELL
+                            cout << "BELL\n";
+                            write(1, "\a", 1);
+                        }
+                        else{
+                            history_str.clear(); 
+
+                            //if (history_index == history_size){
+                            // clear and move up
+                                // history_index--;
+                            
+                                // for (int n = 0; n < history_str.size(); n++){
+                                //     write(1, "\b", 1);
+                                // }
+
+                                
+                                // cout << "cleared history_str\n";
+                           // }
+                        
+                            // else{
+                            //     // delete current entry 
+                            //     history_index--;
+                            // }
+                        
+
+                            history_index--;
+                            cout << "decremented index to " << history_index << "\n";
+                            for (int n = 0; n <new_history_str.size(); n++){
+                                write(1, "\b", 1);
+                            } // clear 
+                            // cout << "deleted current input\n";
+
+                            // show previous entry
+                            new_history_str = history_queue[history_index]; // shallow copy?
+
+                            cout << "new history str is " << new_history_str << "\n";
+                            cout << "size of new history str " << new_history_str.size() << "\n";
+                            new_history_char = new_history_str.c_str();
+
+                            for (int j = 0; j < new_history_str.size(); j++){
+                                write(1, &new_history_char[j], 1);
+                                history_str.push_back(new_history_str[j]);
+                            }
+                            new_history_char = "";
+                           // TODO: Somehow continue parsing into input vector<vector<string>>
+                            // Problem: can't write to actual stdin in such a way that program actually 
+                                // reads from it (would need redirection)
+
+                            // cout << "finished writing after UP\n";
+
+                        }
+
+                        
                     }
-                    else if (int(buffer) == 66)
+                    else if (int(buffer) == 66) //B
                     {
-                        cout << "This was the down arrow \n";
+                        // DOWN ARROW 
+                        cout << "DOWN\n";
+                        new_history_str = history_str;
+                        if (history_index == history_size){
+                            // BELL
+                            cout << "BELL\n";
+                            write(1, "\a", 1);
+                        }
+                        else{
+                            history_str.clear(); 
+                            history_index++;
+                            cout << "incremented index to " << history_index << "\n";
+                        // remove previous output from screen
+                            for (int p = 0; p < new_history_str.size(); p++){
+                                write(1, "\b", 1);
+                            }
+                            cout << "size of queue: " << history_size << "\n";
+                            new_history_char = new_history_str.c_str();
+                            if (history_index < history_size){
+                                // don't want to access history_queue[history_size] --> segfault
+                                new_history_str = history_queue[history_index];
+
+                                cout << "new history str is " << new_history_str << "\n";
+                                cout << "size of new history str " << new_history_str.size() << "\n";
+                                for (int q = 0; q < new_history_str.size(); q++){
+                                    write(1, &new_history_char[q], 1);
+                                    history_str.push_back(new_history_str[q]);
+                                }
+                            }
+                            else{
+                                // TODO
+
+                            }
+                            new_history_char = "";
+
+                            
+                        }
+                        
+
+                    
                     }
                 }
             }
 
             else if (buffer == '\n')
             {
+                write(1, &buffer, 1);
+                history_queue.push_back(history_str); // add string to queue
+                cout << "added " << history_str << " to queue\n";
+                history_size++; // increment size of queue
+                history_index = history_size;
+                if (history_queue.size() > 10){
+                    history_queue.pop_front(); // if there are more than 10 commands, get rid of one
+                    history_size--; 
+                }
+                history_str.clear();
+                new_history_str.clear();
+
                 if (!current_command.empty())
                 {
                     temporary.push_back(current_command);
-
                 }
 
                 if (!temporary.empty())
@@ -301,6 +457,8 @@ int main (int argc, char *argv[], char * const env[])
             }
             else if (buffer == '|')
             {
+                write(1, "|", 1);
+                history_str.push_back(buffer); // add character to history string
                 //input.resize(1);
                 //input[current_index].push_back(current_command);
                 if (!current_command.empty())
@@ -317,14 +475,16 @@ int main (int argc, char *argv[], char * const env[])
             }
             else
             {
+                write(1, &buffer, 1);
+                history_str.push_back(buffer); // add character to history string
                 current_command.push_back(buffer);
             }
-            write(1, &buffer, 1);
+            
             //dummy++;
             
         }
         //cout << "The size is " << size << "\n";
-        /*
+
         int i = 0;
         cout << "\n" << "Printing...\n";
         for(int i = 0; i < input.size(); i++)
@@ -338,14 +498,10 @@ int main (int argc, char *argv[], char * const env[])
             cout << "\n";
             
         }//Get length of the command
-        //cout << current_command << "\n";
-        */
-
-            //now all the commands are in input
-        //cout << "Before it is " << dr << "\n";
-        //cout << input.size() << "\n";
+        cout << current_command << "\n";    
         if (input.size() == 1)//No piping
         {
+            cout << "going into single command with " << input[0][0] << "\n";
             bool done = singleCommand(input[0], dr);
             if (done == true)
             {
@@ -398,15 +554,12 @@ int main (int argc, char *argv[], char * const env[])
             //if there is a '&' you dont have to wait 
 
         }
-        cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
         input.clear();
-        current_command.clear();
+        
         temporary.clear();
-
+        current_command = "";
     }
-
-
-
+        
     ResetCanonicalMode(0, &Attributes);
     return 0;
 }
@@ -556,6 +709,7 @@ bool singleCommand (vector<string> current_command, string wd)
         closedir(ls_directory);
             
     } 
+
     else //outside command + piping
     {
 
@@ -588,6 +742,7 @@ bool singleCommand (vector<string> current_command, string wd)
     //     execvp(arguments[0], arguments)
     // }
  //else{
+        cout << "going into outside command with " << current_command[0] << "\n";
         outsideCommand(current_command[0], args, current_command.size());
     // }
         
