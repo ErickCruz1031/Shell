@@ -25,7 +25,7 @@ void outsideCommand(string command, char* const* arguments, int num_args, bool p
     int status;
 
     if (piping){
-        // cout << "piping in outside command\n";
+        cout << "piping in outside command\n";
         execvp(arguments[0], arguments);
     }
     //cout << "hello there\n";
@@ -35,7 +35,6 @@ void outsideCommand(string command, char* const* arguments, int num_args, bool p
         {
             //cout << "sogknva\n";
             execvp(arguments[0], arguments);
-            cout << "size of command is: " << command.size() << "\n";
             write(1, "Failed to execute ", 18);
             write(1, arguments[0], command.size());
             write(1, "\n", 1);
@@ -288,6 +287,7 @@ int main (int argc, char *argv[], char * const env[])
                 if (!current_command.empty())
                 {
                     temporary.push_back(current_command);
+
                 }
                 current_command = "";
                 continue;
@@ -339,13 +339,13 @@ int main (int argc, char *argv[], char * const env[])
                     read(0, &buffer, 1);               
                     if(int(buffer) == 65) // A
                     { // UP ARROW 
-                        cout << "UP\n";
+                        
 
                         // ca
                         new_history_str = history_str;
                         if (history_index == 0){
                             // BELL
-                            cout << "BELL\n";
+                            
                             write(1, "\a", 1);
                         }
                         else{
@@ -646,13 +646,8 @@ bool singleCommand (vector<string> current_command, string wd, bool piping)
         }
         const char* new_path = path.c_str();
         int newDir = chdir(new_path);
-        if (newDir == 0)
-        {
-            //write(1, "\n", 1); 
-            //continue;
-            // cout << "Opened  \n";
-        }
-        else if (newDir == -1){
+
+        if (newDir == -1){
             write(1, "Error changing directory.", 26);
         }
         write(1, "\n", 1); 
