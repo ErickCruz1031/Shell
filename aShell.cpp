@@ -374,6 +374,14 @@ int main (int argc, char *argv[], char * const env[])
             if (child_one == 0)
             {
 
+                cout << "Child with oneee " << input[0][0] << "\n";
+                bool inner = false;
+                if((input[0][0] == "ls")|| (input[0][0] == "pwd") || (input[0][0] == "ff"))
+                {
+                    cout << "Inner command!\n";
+                    inner = true;
+                }
+
                 char** args = new char*[input[0].size() + 1];
                 for(int k = 0; k < input[0].size(); k++)
                 {
@@ -386,10 +394,23 @@ int main (int argc, char *argv[], char * const env[])
                 // args[current_command.size()][0] = '\0';
                 args[input[0].size()] = (char*)NULL;
 
+
                 dup2(fd[1], 1);
-                close(fd[0]);
-                close(fd[1]);
-                execvp(args[0], args);
+                //close(fd[0]);
+                //close(fd[1]);
+                if (!inner)
+                {
+                    close(fd[0]);
+                    close(fd[1]);
+                    execvp(args[0], args);
+                }
+                else
+                {
+                    close(fd[0]);
+                    singleCommand(input[0], dr);
+                    close(fd[1]);
+                }
+                //execvp(args[0], args);
 
                 //cout << "returned from first\n";
 
@@ -401,6 +422,13 @@ int main (int argc, char *argv[], char * const env[])
 
             if (child_two == 0)
             {
+                bool inner_process = false;
+                cout << "Child with " << input[1][0] << "\n";
+                if((input[1][0] == "ls")|| (input[1][0] == "pwd") || (input[1][0] == "ff"))
+                {
+                    cout << "Inner command in 2 AHHHHH!\n";
+                    inner_process = true;
+                }
                 char** args = new char*[input[1].size() + 1];
 
                 for(int k = 0; k < input[1].size(); k++)
@@ -415,11 +443,24 @@ int main (int argc, char *argv[], char * const env[])
                 // args[current_command.size()][0] = '\0';
                 args[input[1].size()] = (char*)NULL;
                 //close(fd[1]);
-                cout << "Child\n";
+                cout << "About to call\n";
                 dup2(fd[0], 0);
-                close(fd[0]);
-                close(fd[1]);
-                execvp(args[0], args);
+                //close(fd[0]);
+                //close(fd[1]);
+                
+                if (!inner_process)
+                {
+                    close(fd[0]);
+                    close(fd[1]);
+                    execvp(args[0], args);
+                }
+                else
+                {
+                    close(fd[1]);  
+                    singleCommand(input[1], dr);
+                    close(fd[0]);
+                }
+                //execvp(args[0], args);
                 //close(fd[0]);
                 //singleCommand(input[1], dr);
                 //close(fd[0]);
