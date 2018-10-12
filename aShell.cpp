@@ -15,43 +15,56 @@
 
 using namespace std;
 
-bool singleCommand (vector<string> current_command, string wd);
+bool singleCommand (vector<string> current_command, string wd, bool piping);
 void ResetCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSANOW, savedattributes);
 }
 
-void outsideCommand(string command, char* const* arguments, int num_args)
+void outsideCommand(string command, char* const* arguments, int num_args, bool piping)
 {
     int status;
 
-    //cout << "hello there\n";
-    pid_t pid = fork(); // 
-    if (pid == 0)
-    {
-        //cout << "sogknva\n";
+    if (piping){
+        // cout << "piping in outside command\n";
         execvp(arguments[0], arguments);
-        //cout << "Exec worked\n";
-        /*
-        if (execvp(arguments[0], arguments) == -1)
-        {
-            //cout << "ERROR \n";
-            //cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
-        }
-        else
-        {
-            //cout << "success\n";
-        }
-        */
     }
-    
-    else
-    {
-        cout << "PARENT\n";
-        int child_pid = waitpid(pid, &status, 0);
-        //cout << "Status is " << status << " and other is " << child_pid << "\n";
-        //cout << "Finished from " << child_pid << "\n";
+    //cout << "hello there\n";
+    else{
+        pid_t pid = fork(); // 
+        if (pid == 0)
+        {
+            //cout << "sogknva\n";
+            execvp(arguments[0], arguments);
+            cout << "size of command is: " << command.size() << "\n";
+            write(1, "Failed to execute ", 18);
+            write(1, arguments[0], command.size());
+            write(1, "\n", 1);
+
+            //cout << "Exec worked\n";
+            /*
+            if (execvp(arguments[0], arguments) == -1)
+            {
+                //cout << "ERROR \n";
+                //cout << "failed to run "  << "'" << string(arguments[0]) << "'" << "\n";
+            }
+            else
+            {
+                //cout << "success\n";
+            }
+            */
+        }
+        
+        else if (pid > 0)
+        {
+            // cout << "PARENT\n";
+            int child_pid = waitpid(pid, &status, 0);
+            //cout << "Status is " << status << " and other is " << child_pid << "\n";
+            //cout << "Finished from " << child_pid << "\n";
+        }
+
     }
-    cout << "RETURN\n";
+
+    // cout << "RETURN\n";
     
 
     return;
@@ -284,6 +297,7 @@ int main (int argc, char *argv[], char * const env[])
             {
                 //cout << "Delete key!\n";
                 write(1, "\b \b", 3);
+                current_command.pop_back();
                 // remove characters from history_str
                 if (history_str.size() > 0){
                     history_str.erase(history_str.begin() + history_str.size() - 1);
@@ -502,7 +516,7 @@ int main (int argc, char *argv[], char * const env[])
         if (input.size() == 1)//No piping
         {
             cout << "going into single command with " << input[0][0] << "\n";
-            bool done = singleCommand(input[0], dr);
+            bool done = singleCommand(input[0], dr, false);
             if (done == true)
             {
                 ResetCanonicalMode(0, &Attributes);
@@ -510,47 +524,59 @@ int main (int argc, char *argv[], char * const env[])
             }
 
         }
-        else
+        else //piping
         {
             int fd[2];
             int status;
 
             pipe(fd);
 
-            pid_t child_one = fork();
 
-            if (child_one == 0)
+            pid_t pid = fork();
+
+            if (pid == 0)
             {
-                close(fd[0]);
                 dup2(fd[1], 1);
+                close(fd[0]);
                 close(fd[1]);
-                cout << "executing first\n";
-                singleCommand(input[0], dr);
+                // cout << "executing first\n";
+                singleCommand(input[0], dr, true);
 
                 cout << "returned from first\n";
 
             }
-            close(fd[1]);
-            //close(fd[0]);
-            pid_t child_two = fork();
+            else{
+                pid_t pid2 = fork();
+                // dup2(fd[0], 0);
+                // close(fd[0]);
+                // close(fd[1]);
+                // waitpid(pid, &status, 0);
+               
+                
+                if (pid2 == 0){
+                
+                    dup2(fd[0], 0);
+                    close(fd[0]);
+                    close(fd[1]);
+                    singleCommand(input[1], dr, true);
+                    
+                    // cout << "Returned from sccnd\n";
+                }
+                else if (pid2 > 0){
+                    
+                    close(fd[0]);
+                    close(fd[1]);
+                    waitpid(pid2, &status, 0);
+                }
 
-
-
-            if (child_two == 0)
-            {
-                close(fd[1]);
-                dup2(fd[0], 0);
-                close(fd[0]);
-                singleCommand(input[1], dr);
-                //close(fd[0]);
-                cout << "Returned from sccnd\n";
             }
+        
 
 
             //close(fd[1]);
-            close(fd[0]);
-            waitpid(child_one, NULL, 0);
-            waitpid(child_two, NULL, 0);
+            // close(fd[0]);
+            // waitpid(child_one, NULL, 0);
+            // waitpid(child_two, NULL, 0);
             //if there is a '&' you dont have to wait 
 
         }
@@ -564,9 +590,9 @@ int main (int argc, char *argv[], char * const env[])
     return 0;
 }
 
+// parse_cmd(vector<string> current_command, char& )
 
-
-bool singleCommand (vector<string> current_command, string wd)
+bool singleCommand (vector<string> current_command, string wd, bool piping)
 {
     //cout << current_command[0] << "! !!!!\n";
     //cout << wd << "\n";
@@ -583,6 +609,11 @@ bool singleCommand (vector<string> current_command, string wd)
         //Get the path
         
         string path;
+
+        if (current_command.size() == 1){
+            const char* home = getenv("HOME");
+            chdir(home);
+        }
 
         if (current_command[1] == "..")
         {
@@ -619,7 +650,10 @@ bool singleCommand (vector<string> current_command, string wd)
         {
             //write(1, "\n", 1); 
             //continue;
-            cout << "Opened  \n";
+            // cout << "Opened  \n";
+        }
+        else if (newDir == -1){
+            write(1, "Error changing directory.", 26);
         }
         write(1, "\n", 1); 
     }
@@ -642,18 +676,18 @@ bool singleCommand (vector<string> current_command, string wd)
         
         const char *ff_dir_char = current_command[2].c_str();
         const char *ff_filename_char = current_command[1].c_str();
-        cout << "filename: " << current_command[1] << "\n";
-        cout << "directory: " << current_command[2] << "\n";
+        // cout << "filename: " << current_command[1] << "\n";
+        // cout << "directory: " << current_command[2] << "\n";
         //SUbject to change!!!
         //int move = chdir(dr.c_str());//THIS MIGHT NOT BE IT
         int move = chdir(ff_dir_char);
         if (move < 0)
         {
-            cout << "NOO\n";
+            // cout << "NOO\n";
         }
         ff_dir_char = getcwd(backup, 255);
         ff_directory = string(ff_dir_char);
-        cout << "Calling... \n";
+        // cout << "Calling... \n";
         ff_recurse(ff_dir_char, ff_filename_char, ff_directory);
         //Move back to our initial directory
         chdir(wd.c_str());
@@ -743,7 +777,7 @@ bool singleCommand (vector<string> current_command, string wd)
     // }
  //else{
         cout << "going into outside command with " << current_command[0] << "\n";
-        outsideCommand(current_command[0], args, current_command.size());
+        outsideCommand(current_command[0], args, current_command.size(), piping);
     // }
         
 
