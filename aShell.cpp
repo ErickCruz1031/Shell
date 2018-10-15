@@ -169,7 +169,7 @@ string truncateString(string Line)
 }
 
 vector<vector<string> > parse_line(string input_string){
-    cout << "parsing line: " << input_string << "\n";
+    
     vector<vector<string> > input_vector;
     char curr_char;
     string curr_word;
@@ -354,23 +354,26 @@ int main (int argc, char *argv[], char * const env[])
                     read(0, &buffer, 1);               
                     if(int(buffer) == 65) // A
                     { // UP ARROW 
-                        new_history_str = history_str;
+                        // new_history_str = history_str;
                         if (history_index == 0){
                             write(1, "\a", 1);
                         }
                         else{
-                            history_str.clear(); 
-                            temporary.clear();
+                    
                         
                             history_index--;
+                            history_str = new_history_str;
+                            cout << "history_str size: " << history_str.size() << "\n";
                             //cout << "decremented index to " << history_index << "\n";
-                            for (int n = 0; n <new_history_str.size(); n++){
+                            for (int n = 0; n < history_str.size(); n++){
                                 write(1, "\b", 1);
                             } // clear 
+                            history_str.clear(); 
+                            temporary.clear();
 
                             // show previous entry
                             new_history_str = history_queue[history_index]; // shallow copy?
-                            current_command = new_history_str;
+                            
                             new_history_char = new_history_str.c_str();
 
                             for (int j = 0; j < new_history_str.size(); j++){
@@ -379,13 +382,8 @@ int main (int argc, char *argv[], char * const env[])
                             }
                             new_history_char = "";
                             input = parse_line(new_history_str);
-                            cout << "input size after parsing line: " << input.size() << "\n";
-                            cout << "input after parsing line: \n";
-                            for (int input_index = 0; input_index < input.size(); input_index++){
-                                for (int inside_index = 0; inside_index < input[input_index].size(); inside_index++){
-                                    cout << input[input_index][inside_index] << "\n";
-                                }
-                            }
+                            
+
                             current_command = "";
 
 
@@ -401,42 +399,37 @@ int main (int argc, char *argv[], char * const env[])
                     else if (int(buffer) == 66) //B
                     {
 
-                        new_history_str = history_str;
+                        // new_history_str = history_str;
+
                         if (history_index == history_size){
                             write(1, "\a", 1);
                         }
                         else{
-                            history_str.clear(); 
-                            temporary.clear();
+                            
                             
                             history_index++;
                         // remove previous output from screen
-                            for (int p = 0; p < new_history_str.size(); p++){
+                            history_str = new_history_str;
+                            cout << "history_str size: " << history_str.size() << "\n";
+                            for (int p = 0; p < history_str.size(); p++){
                                 write(1, "\b", 1);
                             }
+                            history_str.clear(); 
+                            temporary.clear();
                             new_history_char = new_history_str.c_str();
-                            if (history_index < history_size){
+                            // if (history_index < history_size){
                                 // don't want to access history_queue[history_size] --> segfault
-                                new_history_str = history_queue[history_index];
-                                for (int q = 0; q < new_history_str.size(); q++){
-                                    write(1, &new_history_char[q], 1);
-                                    history_str.push_back(new_history_str[q]);
-                                }
-
+                            new_history_str = history_queue[history_index];
+                            for (int q = 0; q < new_history_str.size(); q++){
+                                write(1, &new_history_char[q], 1);
+                                history_str.push_back(new_history_str[q]);
                             }
-                            else{
-                                // TODO
 
-                            }
                             new_history_char = "";
+                            
+                            
                             input = parse_line(new_history_str);
-                            cout << "input size after parsing line: " << input.size() << "\n";
-                            cout << "input after parsing line: \n";
-                            for (int input_index = 0; input_index < input.size(); input_index++){
-                                for (int inside_index = 0; inside_index < input[input_index].size(); inside_index++){
-                                    cout << input[input_index][inside_index] << "\n";
-                                }
-                            }
+                            
                             current_command = "";
                             
                         }
@@ -462,13 +455,13 @@ int main (int argc, char *argv[], char * const env[])
 
                 if (!current_command.empty())
                 {
-                    cout << "current_command isn't empty\n";
+                    
                     temporary.push_back(current_command);
                 }
 
                 if (!temporary.empty())
                 {
-                    cout << "temporary isn't empty\n";
+                    
                     input.push_back(temporary);
                 }
                 break;
@@ -496,25 +489,25 @@ int main (int argc, char *argv[], char * const env[])
 
 
         }
-        cout << "\n" << "Printing...\n";
-        cout << "size of input: " << input.size() << "\n";
-        for(int i = 0; i < input.size(); i++)
-        {
+        // cout << "\n" << "Printing...\n";
+        // cout << "size of input: " << input.size() << "\n";
+        // for(int i = 0; i < input.size(); i++)
+        // {
             
-            //cout << "Pushing back" << command[i] << "AHHH\n";
-            for(int k = 0; k < input[i].size(); k++)
-            {
-                cout << "'" << input[i][k] << "'";
-            }
-            cout << "\n";
-        }
+        //     //cout << "Pushing back" << command[i] << "AHHH\n";
+        //     for(int k = 0; k < input[i].size(); k++)
+        //     {
+        //         cout << "'" << input[i][k] << "'";
+        //     }
+        //     cout << "\n";
+        // }
         while(input.size() >= 1)
         {
 
 
             if (input.size() == 1)//No piping
             {
-                cout << "input size is 1\n";
+               
                 //!!!!!!!!!!!!!!!!!
                 bool done = singleCommand(input[0], dr);
                 //out << "First one\n";
