@@ -205,7 +205,67 @@ string truncateString(string Line)
     return New;
 }
 
+// function that parses new history str in the same way that main loop parses input
+// then push_back to input vector
+// continue with read loop
 
+vector<vector<string> > parse_line(string input_string){
+    cout << "parsing line: " << input_string << "\n";
+    vector<vector<string> > input_vector;
+    char curr_char;
+    string curr_word;
+    vector<string> curr_command;
+    for (int i = 0; i < input_string.size(); i++){
+        curr_char = input_string[i];
+        if (int(curr_char) == 32) // space
+        {
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
+            curr_word = "";
+            continue;
+        }
+        else if (curr_char == '\n')
+        {
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
+
+            if (!curr_command.empty())
+            {
+                input_vector.push_back(curr_command);
+            }
+            break;
+        }
+        else if (curr_char == '|')
+        {
+            
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
+            //temporary.push_back(current_command);
+            input_vector.push_back(curr_command);
+            //current_index++;
+            // TODO: deal with case with two pipes next to each other
+                // e.g. Nitta's shell: cat hi.md | | grep -i main fails, prints nothing
+            curr_command.clear();
+            curr_word = "";
+
+            //current_command = "";
+
+        }
+        else{
+            curr_word.push_back(curr_char);
+        }
+    }
+    curr_command.push_back(curr_word);
+    input_vector.push_back(curr_command);
+    return input_vector;
+
+}
 
 int main (int argc, char *argv[], char * const env[])
 {
@@ -241,6 +301,7 @@ int main (int argc, char *argv[], char * const env[])
     int history_size = 0;
     string history_str;
     deque<string> history_queue;
+    vector<vector<string> > input_string;
     const char *new_history_char;
 
     string new_history_str;
@@ -349,6 +410,7 @@ int main (int argc, char *argv[], char * const env[])
                             write(1, "\a", 1);
                         }
                         else{
+                            temporary.clear();
                             history_str.clear(); 
 
                             //if (history_index == history_size){
@@ -388,7 +450,19 @@ int main (int argc, char *argv[], char * const env[])
                                 history_str.push_back(new_history_str[j]);
                             }
                             new_history_char = "";
-                            current_command = new_history_str; //TENTATIVE
+                            // need to push every space-separated item in new history str into temporary
+
+                            // current_command = new_history_str; 
+                            input = parse_line(new_history_str);
+                            cout << "input after parsing line: \n";
+                            for (int input_index = 0; input_index < input.size(); input_index++){
+                                for (int inside_index = 0; inside_index < input[input_index].size(); inside_index++){
+                                    cout << input[input_index][inside_index] << "\n";
+                                }
+                                
+                            }
+
+                            //TENTATIVE
                            // TODO: Somehow continue parsing into input vector<vector<string>>
                             // Problem: can't write to actual stdin in such a way that program actually 
                                 // reads from it (would need redirection)
@@ -399,7 +473,7 @@ int main (int argc, char *argv[], char * const env[])
 
                         
                     }
-                    else if (int(buffer) == 66) //B
+                    else if (int(buffer) == 66) //
                     {
                         // DOWN ARROW 
                         cout << "DOWN\n";
@@ -410,6 +484,7 @@ int main (int argc, char *argv[], char * const env[])
                             write(1, "\a", 1);
                         }
                         else{
+                            temporary.clear(); // TENTATIVE
                             history_str.clear(); 
                             history_index++;
                             cout << "incremented index to " << history_index << "\n";
@@ -502,6 +577,7 @@ int main (int argc, char *argv[], char * const env[])
 
         int i = 0;
         cout << "\n" << "Printing...\n";
+        cout << "size of input: " << input.size() << "\n";
         for(int i = 0; i < input.size(); i++)
         {
             
@@ -513,8 +589,11 @@ int main (int argc, char *argv[], char * const env[])
             cout << "\n";
             
         }//Get length of the command
-        cout << current_command << "\n";    
-        if (input.size() == 1)//No piping
+        cout << current_command << "\n";
+        if (input.size() == 0){
+            cout << "do nothing\n";
+        }
+        else if (input.size() == 1)//No piping
         {
             cout << "going into single command with " << input[0][0] << "\n";
             bool done = singleCommand(input[0], dr, false);
