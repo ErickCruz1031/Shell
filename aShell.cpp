@@ -168,7 +168,63 @@ string truncateString(string Line)
     return New;
 }
 
+vector<vector<string> > parse_line(string input_string){
+    cout << "parsing line: " << input_string << "\n";
+    vector<vector<string> > input_vector;
+    char curr_char;
+    string curr_word;
+    vector<string> curr_command;
+    for (int i = 0; i < input_string.size(); i++){
+        curr_char = input_string[i];
+        if (int(curr_char) == 32) // space
+        {
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
+            curr_word = "";
+            continue;
+        }
+        else if (curr_char == '\n')
+        {
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
 
+            if (!curr_command.empty())
+            {
+                input_vector.push_back(curr_command);
+            }
+            break;
+        }
+        else if (curr_char == '|')
+        {
+            
+            if (!curr_word.empty())
+            {
+                curr_command.push_back(curr_word);
+            }
+            //temporary.push_back(current_command);
+            input_vector.push_back(curr_command);
+            //current_index++;
+            // TODO: deal with case with two pipes next to each other
+                // e.g. Nitta's shell: cat hi.md | | grep -i main fails, prints nothing
+            curr_command.clear();
+            curr_word = "";
+
+            //current_command = "";
+
+        }
+        else{
+            curr_word.push_back(curr_char);
+        }
+    }
+    curr_command.push_back(curr_word);
+    input_vector.push_back(curr_command);
+    return input_vector;
+
+}
 
 int main (int argc, char *argv[], char * const env[])
 {
@@ -320,6 +376,10 @@ int main (int argc, char *argv[], char * const env[])
                                 history_str.push_back(new_history_str[j]);
                             }
                             new_history_char = "";
+                            input = parse_line(new_history_str);
+
+
+
                            // TODO: Somehow continue parsing into input vector<vector<string>>
                             // Problem: can't write to actual stdin in such a way that program actually 
                                 // reads from it (would need redirection)
@@ -351,12 +411,14 @@ int main (int argc, char *argv[], char * const env[])
                                     write(1, &new_history_char[q], 1);
                                     history_str.push_back(new_history_str[q]);
                                 }
+
                             }
                             else{
                                 // TODO
 
                             }
                             new_history_char = "";
+                            input = parse_line(new_history_str);
 
                             
                         }
@@ -419,6 +481,7 @@ int main (int argc, char *argv[], char * const env[])
 
             if (input.size() == 1)//No piping
             {
+                cout << "input size is 1\n";
                 //!!!!!!!!!!!!!!!!!
                 bool done = singleCommand(input[0], dr);
                 //out << "First one\n";
