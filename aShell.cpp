@@ -258,6 +258,7 @@ int main (int argc, char *argv[], char * const env[])
     int history_size = 0;
     string history_str;
     deque<string> history_queue;
+    int history_str_size;
     const char *new_history_char;
 
     string new_history_str;
@@ -363,11 +364,17 @@ int main (int argc, char *argv[], char * const env[])
                         
                             history_index--;
                             history_str = new_history_str;
-                            cout << "history_str size: " << history_str.size() << "\n";
+                            history_str_size = history_str.size();
                             //cout << "decremented index to " << history_index << "\n";
-                            for (int n = 0; n < history_str.size(); n++){
+                            for (int n = 0; n < history_str_size; n++){
                                 write(1, "\b", 1);
                             } // clear 
+                            for (int space_index = 0; space_index < history_str_size; space_index++){
+                                write(1, " ", 1);
+                            }
+                            for (int bs_index = 0; bs_index < history_str_size; bs_index++){
+                                write(1, "\b", 1);
+                            }
                             history_str.clear(); 
                             temporary.clear();
 
@@ -410,8 +417,14 @@ int main (int argc, char *argv[], char * const env[])
                             history_index++;
                         // remove previous output from screen
                             history_str = new_history_str;
-                            cout << "history_str size: " << history_str.size() << "\n";
-                            for (int p = 0; p < history_str.size(); p++){
+                            history_str_size = history_str.size();
+                            for (int p = 0; p < history_str_size; p++){
+                                write(1, "\b", 1);
+                            }
+                            for (int space_index = 0; space_index < history_str_size; space_index++){
+                                write(1, " ", 1);
+                            }
+                            for (int bs_index = 0; bs_index < history_str_size; bs_index++){
                                 write(1, "\b", 1);
                             }
                             history_str.clear(); 
